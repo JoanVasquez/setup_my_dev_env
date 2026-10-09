@@ -1,0 +1,28 @@
+# Whitespace-separated columns: logical tool name, APT package name(s), pacman package name(s).
+# Commas group multiple packages in a cell. Vendor installers (AWS/nvm/Docker on Debian)
+# are dispatched in lib/packages.sh instead of being listed as direct package mappings.
+# component Debian-family Arch-family
+bash bash bash
+fish fish fish
+zsh zsh zsh
+git git git
+tmux tmux tmux
+nvim neovim neovim
+fzf fzf fzf
+zoxide zoxide zoxide
+bat bat bat
+ripgrep ripgrep ripgrep
+fd fd-find fd
+java default-jdk jdk-openjdk
+kitty kitty kitty
+konsole konsole konsole
+alacritty alacritty alacritty
+ghostty ghostty ghostty
+clipboard xclip,wl-clipboard xclip,wl-clipboard
+eza eza eza
+lf lf lf
+vim vim vim
+tree tree tree
+fastfetch fastfetch fastfetch
+col bsdextrautils util-linux
+cachyos-fish-config - cachyos-fish-config

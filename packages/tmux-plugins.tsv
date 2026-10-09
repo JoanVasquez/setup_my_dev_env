@@ -1,0 +1,4 @@
+# The tmux config enables all three; installing its manager also installs these sources.
+tmux-plugins/tpm tpm
+tmux-plugins/tmux-resurrect scripts/save.sh
+tmux-plugins/tmux-continuum continuum.tmux

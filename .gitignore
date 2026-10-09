@@ -1,0 +1,17 @@
+.DS_Store
+*.log
+*.swp
+*.swo
+.env
+.env.*
+!.env.example
+**/secrets/**
+**/private/**
+**/*_history
+
+__pycache__/
+*.pyc
+
+# Zsh completion/history/plugin state is stored outside the checkout.
+*.zwc
+.zcompdump*

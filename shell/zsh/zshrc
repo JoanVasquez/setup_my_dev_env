@@ -1,0 +1,6 @@
+# Compatibility entrypoint for existing ~/.zshrc links and manual sourcing.
+# Normal startup uses ~/.zshenv to redirect Zsh into its XDG directory.
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+[[ ! -r "$ZDOTDIR/.zshenv" ]] || source "$ZDOTDIR/.zshenv"
+[[ ! -r "$ZDOTDIR/.zshrc" ]] || source "$ZDOTDIR/.zshrc"

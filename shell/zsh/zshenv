@@ -1,0 +1,7 @@
+# User-level equivalent of the global ZDOTDIR fragment. Zsh reads ~/.zshenv
+# before its interactive rc file when no system-level ZDOTDIR is configured.
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+if [[ -d "$XDG_CONFIG_HOME/zsh" ]]; then
+    export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+    [[ ! -r "$ZDOTDIR/.zshenv" ]] || source "$ZDOTDIR/.zshenv"
+fi

@@ -1,0 +1,17 @@
+# Slight transparency and padding around terminal content.
+[window]
+opacity = 0.97
+padding = { x = 10, y = 10 }
+# Use a portable font default; change family to an installed Nerd Font for prompt icons.
+[font]
+size = 12.0
+[font.normal]
+family = "monospace"
+# Tokyonight Moon background/text colors shared with tmux and the other terminals.
+[colors.primary]
+background = "#222436"
+foreground = "#c8d3f5"
+# Keep cursor text readable against the light cursor fill.
+[colors.cursor]
+text = "#222436"
+cursor = "#c8d3f5"

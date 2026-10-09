@@ -1,0 +1,11 @@
+# Profile/tool followed by its direct requirements. These are resolved recursively.
+# Shell requirements cover active modules/editor/navigation, not aliases for optional apps.
+bash git nvim starship zoxide fzf bat fd ripgrep nvm
+fish git vim nvim starship zoxide fzf bat fd ripgrep eza tree nvm clipboard
+zsh git nvim starship zoxide fzf bat fd ripgrep eza lf nvm clipboard zsh-plugins
+nvim git
+tmux fzf tpm
+tpm tmux git
+zsh-plugins git
+# Only enabled for Fish on CachyOS; other distros use the portable Fish fallback.
+fish-cachyos cachyos-fish-config fastfetch col

@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# Stop on unhandled errors (-e), unset variables (-u), and failing pipeline stages.
+# This entrypoint owns shared state; the sourced lib files define helper functions.
+set -euo pipefail
+# Resolve the checkout directory from this script, so commands work from any cwd.
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+# Load helpers into the same Bash process. Shared helpers come before orchestration.
+# Sourcing defines helpers/static registries; installation starts only at dispatch below.
+for module in core platform detection dependencies links packages installers/node installers/extras installers/docker installers/aws installers/zsh setup doctor; do
+    source "$ROOT/lib/$module.sh"
+done
+# Print the public commands and flags; the quoted heredoc keeps examples literal.
+usage() {
+    cat <<'HELP'
+Usage: ./bin/dotfiles [setup|install|packages|doctor|unlink] [options]
+No command starts the interactive setup wizard.
+
+setup     Choose shell, terminal, tools; install packages and link configs.
+  --shell auto|bash|fish|zsh|none
+          Setup installs the selected shell and makes it your default login shell.
+  --terminal auto|kitty|konsole|alacritty|ghostty|none
+  --tools git,nvim,tmux,starship,zoxide,nvm,docker,java,codex,fzf,bat,ripgrep,fd,clipboard,tpm,aws,eza,lf,zsh-plugins,vim,tree,fastfetch
+          Use --tools none for no optional tools; shell/profile requirements still install.
+          The wizard asks about independent tools; required dependencies install automatically.
+  --no-packages      Only link selected configs.
+  --keep-shell      Configure the chosen shell without changing your login shell.
+  --system-zshenv   Append the XDG bootstrap to /etc/zsh/zshenv (Zsh setup only).
+  --login-shell     Also change the login shell in a --no-packages setup.
+  --enable-docker   Enable and start Docker's service.
+  --docker-group    Join the Docker group (root-level access).
+
+install / unlink
+  --components bash,zsh,fish,tmux,nvim,starship,kitty,alacritty,konsole,ghostty
+  --all             Select every configuration.
+  Default: configs for installed programs and the login shell.
+
+packages            Install tools and selected shell/terminal, without linking.
+  Uses --shell, --terminal, --tools and Docker options; no shell/terminal by default.
+  --extra           Include all terminal packages and clipboard tools.
+
+doctor              Show platform, configs and installed tools.
+
+Shared options: --dry-run (preview without changes), --yes (unattended).
+Existing configs are moved into timestamped backups before symlinking.
+Run as your normal user: privilege escalation is only used for system changes.
+HELP
+}
+# No subcommand means the interactive wizard. Consume a command only if it is not a flag.
+cmd=setup
+if (($#)) && [[ "$1" != -* ]]; then cmd="$1"; shift; fi
+case "$cmd" in setup|install|unlink|packages|doctor) ;; *) usage >&2; exit 2 ;; esac
+# Flags are integer booleans: 0 means off, 1 means on; ((flag)) checks them.
+# selected is the comma-separated config list used by install/unlink.
+all=0 dry=0 yes=0 extra=0 selected=""
+# -1 defers the default-shell decision until command and config-only mode are resolved.
+no_packages=0 login_shell=-1 enable_docker=0 docker_group=0 system_zshenv=0
+# Explicit-choice flags tell the wizard which questions the CLI already answered.
+shell_choice=auto terminal_choice=auto shell_explicit=0 terminal_explicit=0 tools_explicit=0
+# Tools can be installed; components are the subset with repository configs to link.
+# The tools string below is the unattended default; the wizard builds its own selection.
+tools_available=(git nvim tmux starship zoxide nvm docker java codex fzf bat ripgrep fd clipboard tpm aws eza lf zsh-plugins vim tree fastfetch)
+tools=git,nvim,tmux,starship,zoxide,nvm,docker,java,codex,fzf,bat,ripgrep,fd,tpm,aws
+components=(bash zsh fish tmux nvim starship kitty alacritty konsole ghostty)
+# Parse arguments in order. The first case checks command-specific flag validity;
+# the second stores values. shift removes an argument from the remaining input.
+while (($#)); do
+    case "$1" in
+        --all|--components) [[ "$cmd" == install || "$cmd" == unlink ]] || die "$1 applies to install/unlink only" ;;
+        --extra) [[ "$cmd" == packages ]] || die '--extra applies to packages only' ;;
+        --shell|--terminal|--tools|--enable-docker|--docker-group) [[ "$cmd" == setup || "$cmd" == packages ]] || die "$1 applies to setup/packages only" ;;
+        --no-packages|--login-shell|--keep-shell|--system-zshenv) [[ "$cmd" == setup ]] || die "$1 applies to setup only" ;;
+    esac
+    case "$1" in
+        --all) all=1 ;;
+        --dry-run) dry=1 ;;
+        --yes) yes=1 ;;
+        --extra) extra=1 ;;
+        --no-packages) no_packages=1 ;;
+        --login-shell) login_shell=1 ;;
+        --keep-shell) login_shell=0 ;;
+        --system-zshenv) system_zshenv=1 ;;
+        --enable-docker) enable_docker=1 ;;
+        --docker-group) docker_group=1 ;;
+        --components|--shell|--terminal|--tools)
+            [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || die "Missing value for $1"
+            case "$1" in
+                --components) selected="$2" ;;
+                --shell) shell_choice="$2"; shell_explicit=1 ;;
+                --terminal) terminal_choice="$2"; terminal_explicit=1 ;;
+                --tools) tools="$2"; tools_explicit=1 ;;
+            esac
+            # A value-taking option consumes both the option and its following value.
+            shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) die "Unknown option: $1" ;;
+    esac
+    shift
+done
+# Include per-user installs when checking what is already available.
+export PATH="$HOME/.local/bin:$PATH"
+family="$(os_family)"
+# XDG_STATE_HOME overrides the default state directory. Timestamp + PID separates runs.
+backup_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/backups/$(date +%Y%m%d-%H%M%S)-$$"
+# Dispatch only after parsing. setup installs and links; packages only installs.
+case "$cmd" in
+    doctor) doctor ;;
+    install|unlink)
+        select_components
+        printf '%s: %s\n' "$cmd" "${chosen[*]:-none}"
+        if confirm; then link_components; else printf 'Cancelled\n'; fi ;;
+    setup) perform_setup ;;
+    packages)
+        # Build the same install plan as setup without running its interactive wizard.
+        resolve_setup
+        if ((extra)); then
+            for name in kitty alacritty konsole ghostty clipboard; do
+                if tool_installed "$name"; then printf 'skip: %s already installed\n' "$name"
+                else add_package "$(package_for "$name")"; fi
+            done
+        fi
+        show_plan
+        if confirm; then
+            # Downloaded scripts/keys live in a temporary directory removed on process exit.
+            if ((!dry)); then work_dir="$(mktemp -d)"; trap 'rm -rf -- "$work_dir"' EXIT; fi
+            install_packages
+            install_vendors
+        else printf 'Cancelled\n'; fi ;;
+esac

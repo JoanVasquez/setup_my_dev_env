@@ -1,0 +1,13 @@
+# Tokyonight Moon palette shared with tmux and other terminals.
+# Portable font defaults; choose an installed Nerd Font if you want icon glyphs.
+font-family = monospace
+font-size = 12
+# Ghostty color values here are hexadecimal RGB without a # prefix.
+background = 222436
+foreground = c8d3f5
+cursor-color = c8d3f5
+selection-background = 3b4261
+# Add space around content; opacity below 1 makes the background slightly transparent.
+window-padding-x = 10
+window-padding-y = 10
+background-opacity = 0.97

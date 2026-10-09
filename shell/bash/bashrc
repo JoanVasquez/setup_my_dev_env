@@ -1,0 +1,15 @@
+# Portable Bash entrypoint; local changes belong in bash/local.bash.
+# Only interactive shells need aliases, prompts and terminal key bindings.
+[[ $- == *i* ]] || return
+# Resolve ~/.bashrc through its symlink before finding the repository root.
+# BASH_SOURCE identifies this sourced file, unlike $0 which identifies the shell.
+DOTFILES_HOME="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/../.." && pwd -P)"
+DOTFILES_SHELL=bash
+source "$DOTFILES_HOME/lib/platform.sh"
+# Load environment first so installed tools are on PATH before integrations initialize.
+for dotfiles_module in environment aliases functions platform integrations; do
+    source "$DOTFILES_HOME/shell/common/$dotfiles_module.sh"
+done
+unset dotfiles_module
+# Load personal overrides last so they can replace shared defaults without editing this repo.
+[[ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/bash/local.bash" ]] || source "${XDG_CONFIG_HOME:-$HOME/.config}/bash/local.bash"

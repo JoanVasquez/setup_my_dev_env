@@ -1,0 +1,5 @@
+# GitHub repository and source entrypoint; shared by the installer and runtime loader.
+zsh-users/zsh-autosuggestions zsh-autosuggestions.zsh
+zsh-users/zsh-history-substring-search zsh-history-substring-search.zsh
+jeffreytse/zsh-vi-mode zsh-vi-mode.plugin.zsh
+zdharma-continuum/fast-syntax-highlighting fast-syntax-highlighting.plugin.zsh
