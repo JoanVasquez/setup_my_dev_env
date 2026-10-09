@@ -14,7 +14,7 @@ os_field() (
         printf '%s\n' "${!field:-}"
     fi
 )
-# Return arch, debian, or unsupported on stdout. Check the exact ID first,
+# Return arch, debian, fedora, or unsupported on stdout. Check the exact ID first,
 # then split ID_LIKE into ancestry tokens; substring matches would misidentify names.
 os_family() {
     local token
@@ -22,6 +22,7 @@ os_family() {
         case "$token" in
             arch|manjaro|cachyos|endeavouros) printf 'arch\n'; return ;;
             debian|ubuntu|linuxmint|pop) printf 'debian\n'; return ;;
+            fedora|nobara|ultramarine) printf 'fedora\n'; return ;;
         esac
     done
     printf 'unsupported\n'
@@ -56,4 +57,20 @@ detect_terminal() {
         if command -v "$app" >/dev/null 2>&1; then printf '%s\n' "$app"; return; fi
     done
     printf 'none\n'
+}
+
+# OSTree/image-based desktops require a different installation lifecycle.
+# Keep config-only operations available instead of attempting host DNF writes.
+fedora_atomic() {
+    [[ -e /run/ostree-booted ]] && return 0
+    case "$(os_field VARIANT_ID)" in
+        silverblue|kinoite|sericea|onyx|coreos|sway-atomic|budgie-atomic) return 0 ;;
+    esac
+    return 1
+}
+# Zsh's global startup file is compiled to different distro paths.
+system_zshenv_path() {
+    if [[ -n "${ZSH_GLOBAL_ENV_FILE:-}" ]]; then printf '%s\n' "$ZSH_GLOBAL_ENV_FILE"
+    elif [[ "$family" == debian ]]; then printf '/etc/zsh/zshenv\n'
+    else printf '/etc/zshenv\n'; fi
 }

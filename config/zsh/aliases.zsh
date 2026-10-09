@@ -27,11 +27,8 @@ if (( $+commands[xclip] )); then alias xcopy='xclip -selection clipboard'
 elif (( $+commands[wl-copy] )); then alias xcopy='wl-copy'; fi
 alias sen='sudo systemctl enable --now' sstatus='sudo systemctl status' sstop='sudo systemctl stop'
 
-# Package aliases select the distro at runtime, rather than always calling pacman.
-case "$(os_family)" in
-    arch) alias update='sudo pacman -Syu' install='sudo pacman -S' remove='sudo pacman -Rns' search='pacman -Ss' ;;
-    debian) alias update='sudo apt update && sudo apt upgrade' install='sudo apt install' remove='sudo apt remove' search='apt-cache search' ;;
-esac
+# Shared mappings keep Bash, Zsh and Fish package shortcuts consistent.
+source "$DOTFILES_HOME/shell/common/platform.sh"
 
 # Git aliases retain your Fish names; pager overrides affect only these commands.
 alias g='git' gs='git status' ga='git add' gaa='git add .' gc='git commit'

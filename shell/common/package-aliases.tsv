@@ -1,0 +1,5 @@
+# Alias	Arch-family command	Debian-family command	Fedora-family command
+update	sudo pacman -Syu	sudo apt update && sudo apt upgrade	sudo dnf upgrade --refresh
+install	sudo pacman -S	sudo apt install	sudo dnf install
+remove	sudo pacman -Rns	sudo apt remove	sudo dnf remove
+search	pacman -Ss	apt-cache search	dnf search

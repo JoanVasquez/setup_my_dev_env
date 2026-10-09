@@ -55,12 +55,25 @@ codex_present() {
 }
 # Docker CLI presence and Compose plugin availability are separate checks.
 # `docker compose version` works without contacting the Docker daemon.
-docker_present() { command_exists docker; }
+docker_present() {
+    if [[ "${family:-}" == fedora ]] && package_installed podman-docker; then return 1; fi
+    command_exists docker
+}
 compose_present() { docker_present && docker compose version >/dev/null 2>&1; }
+# The Lua configuration uses APIs introduced in Neovim 0.11.3. Executable
+# presence alone is insufficient on stable distro releases.
+neovim_compatible() {
+    local executable="${1:-nvim}" version
+    version="$("$executable" --version 2>/dev/null)" || return 1
+    [[ "$version" =~ ^NVIM[[:space:]]v([0-9]+)\.([0-9]+)\.([0-9]+) ]] || return 1
+    local major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}"
+    ((10#$major > 0 || 10#$minor > 11 || (10#$minor == 11 && 10#$patch >= 3)))
+}
 # Translate logical tool names into the appropriate executable or composite check.
 # javac verifies a JDK; Debian may expose fd/bat as fdfind/batcat.
 tool_installed() {
     case "$1" in
+        nvim) command_exists nvim && neovim_compatible ;;
         nvm) nvm_ready ;;
         zsh-plugins) zsh_plugins_ready ;;
         cachyos-fish-config) [[ -r /usr/share/cachyos-fish-config/cachyos-config.fish ]] ;;
@@ -84,6 +97,7 @@ package_installed() {
     case "$family" in
         debian) [[ "$(dpkg-query -W -f='${Status}' "$1" 2>/dev/null || true)" == 'install ok installed' ]] ;;
         arch) pacman -Q "$1" >/dev/null 2>&1 ;;
+        fedora) rpm -q -- "$1" >/dev/null 2>&1 ;;
         *) return 1 ;;
     esac
 }

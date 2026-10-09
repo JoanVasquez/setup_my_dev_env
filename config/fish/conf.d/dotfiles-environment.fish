@@ -10,6 +10,7 @@ fish_add_path --path --prepend $HOME/.local/bin
 # Read the same distro detector as the installer; do not duplicate ID_LIKE parsing.
 set -l dotfiles_root (path resolve (status filename))
 set dotfiles_root (path dirname (path dirname (path dirname (path dirname "$dotfiles_root"))))
+set -g DOTFILES_HOME "$dotfiles_root"
 set -l distro (bash -c 'source "$1/lib/platform.sh"; os_family; os_field ID' dotfiles "$dotfiles_root")
 set -g DOTFILES_OS_FAMILY $distro[1]
 if set -q distro[2]
@@ -26,8 +27,8 @@ end
 if not type -q fd; and type -q fdfind
     alias fd=fdfind
 end
-if type -q bat
+if command -q bat
     set -gx MANPAGER 'bat -l man -p'
-else if type -q batcat
+else if command -q batcat
     set -gx MANPAGER 'batcat -l man -p'
 end

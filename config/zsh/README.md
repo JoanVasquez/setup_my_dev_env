@@ -49,10 +49,11 @@ Your requested system-level bootstrap is available explicitly:
 ./bin/dotfiles setup --shell zsh --system-zshenv --yes
 ```
 
-This appends `system-zshenv.zsh` to `/etc/zsh/zshenv`, preserving distro content
+This appends `system-zshenv.zsh` to `/etc/zsh/zshenv` on Debian or `/etc/zshenv`
+on Arch/Fedora, preserving distro content
 and backing up the original to the run's `backups/.../system/zshenv`. A marker
 prevents duplicate appends. For a build using another global location, set
-`ZSH_GLOBAL_ENV_FILE=/etc/zshenv`. The bootstrap enables the XDG directory only
+`ZSH_GLOBAL_ENV_FILE=/path/to/zshenv`. The bootstrap enables the XDG directory only
 when it exists and startup-file reading is enabled.
 
 `unlink` removes managed user links, not the optional global fragment, your
@@ -103,7 +104,9 @@ The Fish names are retained where practical: `g`, `gs`, `gaa`, `gco`, `gsw`,
 Two corrected aliases are `dcud='docker compose up -d'` and
 `nb='npm run build'`. `ls`/`ll`/`la`/`tree` use eza when present. `cat` uses
 bat/batcat, but functions needing machine-readable content invoke `command cat`.
-Distro aliases call APT on Debian derivatives and pacman on Arch derivatives.
+Distro aliases share one manifest across Bash, Fish and Zsh: APT on Debian,
+pacman on Arch, and DNF on Fedora derivatives. Fedora installs lf from its
+upstream standalone binary; no COPR is enabled for it.
 `cd` keeps its native behavior; use `z` for zoxide ranking.
 
 Ctrl-F inserts a non-hidden file selection, quoting spaces/metacharacters.

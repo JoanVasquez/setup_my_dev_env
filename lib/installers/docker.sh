@@ -18,9 +18,14 @@ docker_platform() {
     [[ "$docker_distro" == debian || "$docker_distro" == ubuntu ]] || die 'Invalid DOCKER_DISTRO'
     [[ "$docker_codename" =~ ^[a-z][a-z0-9-]*$ ]] || die 'Cannot determine Docker base release; set DOCKER_CODENAME.'
 }
-# Before installing a missing Debian engine, check repository metadata and conflicts.
+# Before installing Docker, check repository metadata and conflicting providers.
 # An existing engine uses the Compose-only path and does not need repository replacement.
 docker_preflight() {
+    if [[ "$family" == fedora ]]; then
+        # podman-docker provides a docker command but is a different engine.
+        package_installed podman-docker && die 'Docker conflicts with installed podman-docker. Resolve that provider deliberately or omit docker from --tools.'
+        return 0
+    fi
     [[ "$family" == debian ]] || return 0
     if docker_present; then return 0; fi
     docker_platform
@@ -65,7 +70,7 @@ install_compose_only() {
     done
     die 'Docker was preserved, but no compatible Compose v2 package is available. Install the Compose plugin for your existing engine and rerun.'
 }
-# Arch's missing packages were handled earlier; Debian either adds Compose alone
+# Arch/Fedora missing packages were handled earlier; Debian either adds Compose alone
 # or installs the engine/plugins through a signed official APT repository.
 install_docker() {
     if tool_installed docker; then printf 'skip: docker and Compose already installed\n'; return; fi

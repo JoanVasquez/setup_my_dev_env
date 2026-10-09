@@ -61,8 +61,9 @@ wanted() {
 confirm() {
     ((dry || yes)) && return 0
     [[ -t 0 ]] || die "Use --yes for unattended changes, or --dry-run to preview."
-    read -r -p 'Proceed? [y/N] ' reply
-    [[ "$reply" == y || "$reply" == Y ]]
+    local proceed=0
+    prompt_boolean proceed 'Proceed?'
+    ((proceed))
 }
 # Argument: component. Verify its template, move an existing destination to a backup,
 # then create an absolute symlink to the checkout. Matching links are left alone.

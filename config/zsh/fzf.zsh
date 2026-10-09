@@ -59,9 +59,9 @@ _dotfiles_fzf_init() {
         _dotfiles_fzf_eval "$initialization"
         return
     fi
-    for binding_file in /opt/homebrew/opt/fzf/shell/key-bindings.zsh \
-        /usr/local/opt/fzf/shell/key-bindings.zsh /usr/share/fzf/key-bindings.zsh \
-        /usr/share/doc/fzf/examples/key-bindings.zsh "$HOME/.fzf/shell/key-bindings.zsh"; do
+    for binding_file in "$HOME/.fzf/shell/key-bindings.zsh" /opt/homebrew/opt/fzf/shell/key-bindings.zsh \
+        /usr/local/opt/fzf/shell/key-bindings.zsh /usr/share/fzf/key-bindings.zsh /usr/share/fzf/shell/key-bindings.zsh \
+        /usr/share/doc/fzf/examples/key-bindings.zsh; do
         [[ -r "$binding_file" ]] || continue
         _dotfiles_fzf_eval "$(command cat -- "$binding_file")"
         completion_file="${binding_file:h}/completion.zsh"

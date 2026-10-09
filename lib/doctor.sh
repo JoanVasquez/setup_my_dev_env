@@ -12,7 +12,7 @@ doctor() {
     done
     export PATH="$HOME/.local/bin:$PATH"
     # Executable checks show what this process can launch; they do not imply config ownership.
-    for app in git fish zsh bash tmux nvim starship fzf zoxide bat kitty alacritty konsole ghostty java docker node npm codex aws eza lf; do
+    for app in git fish zsh bash tmux nvim starship fzf zoxide bat kitty alacritty konsole ghostty java docker node npm codex aws eza lf python3 go javac cc make tree-sitter rg fd fdfind batcat xclip wl-copy dnf; do
         if command -v "$app" >/dev/null 2>&1; then printf '[installed] %s\n' "$app"; else printf '[absent] %s\n' "$app"; fi
     done
     # nvm is not an executable: source it in a child Bash shell to show Node/npm/Codex.

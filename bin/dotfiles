@@ -6,13 +6,13 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 # Load helpers into the same Bash process. Shared helpers come before orchestration.
 # Sourcing defines helpers/static registries; installation starts only at dispatch below.
-for module in core platform detection dependencies links packages installers/node installers/extras installers/docker installers/aws installers/zsh setup doctor; do
+for module in core platform detection dependencies links packages installers/node installers/extras installers/docker installers/aws installers/zsh setup doctor aliases; do
     source "$ROOT/lib/$module.sh"
 done
 # Print the public commands and flags; the quoted heredoc keeps examples literal.
 usage() {
     cat <<'HELP'
-Usage: ./bin/dotfiles [setup|install|packages|doctor|unlink] [options]
+Usage: ./bin/dotfiles [setup|install|packages|doctor|aliases|unlink] [options]
 No command starts the interactive setup wizard.
 
 setup     Choose shell, terminal, tools; install packages and link configs.
@@ -24,7 +24,7 @@ setup     Choose shell, terminal, tools; install packages and link configs.
           The wizard asks about independent tools; required dependencies install automatically.
   --no-packages      Only link selected configs.
   --keep-shell      Configure the chosen shell without changing your login shell.
-  --system-zshenv   Append the XDG bootstrap to /etc/zsh/zshenv (Zsh setup only).
+  --system-zshenv   Append the XDG bootstrap to the distro global zshenv (Zsh setup only).
   --login-shell     Also change the login shell in a --no-packages setup.
   --enable-docker   Enable and start Docker's service.
   --docker-group    Join the Docker group (root-level access).
@@ -39,6 +39,9 @@ packages            Install tools and selected shell/terminal, without linking.
   --extra           Include all terminal packages and clipboard tools.
 
 doctor              Show platform, configs and installed tools.
+aliases             List this checkout's configured aliases for all installed shells.
+  --shell all|auto|bash|fish|zsh  Limit alias listing (default: all).
+                      In a loaded shell, `aliases` lists live/session aliases.
 
 Shared options: --dry-run (preview without changes), --yes (unattended).
 Existing configs are moved into timestamped backups before symlinking.
@@ -48,7 +51,7 @@ HELP
 # No subcommand means the interactive wizard. Consume a command only if it is not a flag.
 cmd=setup
 if (($#)) && [[ "$1" != -* ]]; then cmd="$1"; shift; fi
-case "$cmd" in setup|install|unlink|packages|doctor) ;; *) usage >&2; exit 2 ;; esac
+case "$cmd" in setup|install|unlink|packages|doctor|aliases) ;; *) usage >&2; exit 2 ;; esac
 # Flags are integer booleans: 0 means off, 1 means on; ((flag)) checks them.
 # selected is the comma-separated config list used by install/unlink.
 all=0 dry=0 yes=0 extra=0 selected=""
@@ -67,7 +70,8 @@ while (($#)); do
     case "$1" in
         --all|--components) [[ "$cmd" == install || "$cmd" == unlink ]] || die "$1 applies to install/unlink only" ;;
         --extra) [[ "$cmd" == packages ]] || die '--extra applies to packages only' ;;
-        --shell|--terminal|--tools|--enable-docker|--docker-group) [[ "$cmd" == setup || "$cmd" == packages ]] || die "$1 applies to setup/packages only" ;;
+        --shell) [[ "$cmd" == setup || "$cmd" == packages || "$cmd" == aliases ]] || die '--shell applies to setup/packages/aliases only' ;;
+        --terminal|--tools|--enable-docker|--docker-group) [[ "$cmd" == setup || "$cmd" == packages ]] || die "$1 applies to setup/packages only" ;;
         --no-packages|--login-shell|--keep-shell|--system-zshenv) [[ "$cmd" == setup ]] || die "$1 applies to setup only" ;;
     esac
     case "$1" in
@@ -104,6 +108,7 @@ backup_dir="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/backups/$(date +%Y%m%
 # Dispatch only after parsing. setup installs and links; packages only installs.
 case "$cmd" in
     doctor) doctor ;;
+    aliases) list_configured_aliases "$([[ "$shell_explicit" == 1 ]] && printf '%s' "$shell_choice" || printf all)" ;;
     install|unlink)
         select_components
         printf '%s: %s\n' "$cmd" "${chosen[*]:-none}"

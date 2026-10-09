@@ -1,6 +1,6 @@
 # Modular Linux dotfiles
 
-A modular installer for your Linux shell, editor, terminal, prompt, and development tools. It detects Debian/Ubuntu or Arch-family distributions, lets you choose Bash, Fish, or Zsh, installs missing requirements, backs up existing configuration, and links this checkout into the locations applications use.
+A modular installer for your Linux shell, editor, terminal, prompt, and development tools. It detects Debian/Ubuntu, Arch-family, and Fedora-family distributions, lets you choose Bash, Fish, or Zsh, installs missing requirements, backs up existing configuration, and links this checkout into the locations applications use.
 
 **Choosing a shell selects its complete configuration profile.** Its required tools and plugins are automatic; the wizard asks only about additional applications. Already-installed programs and valid plugin checkouts are skipped.
 
@@ -14,6 +14,7 @@ A modular installer for your Linux shell, editor, terminal, prompt, and developm
 - [Common installation recipes](#common-installation-recipes)
 - [Detection and repeat runs](#detection-and-repeat-runs)
 - [Distribution packages](#distribution-packages)
+- [Listing aliases](#listing-aliases)
 - [Shell configuration](#shell-configuration)
 - [Neovim](#neovim)
 - [Tmux](#tmux)
@@ -78,9 +79,12 @@ The entrypoint requires Bash 4.4 or newer and uses arrays, `mapfile`, and namere
 | --- | --- | --- |
 | Arch | `arch`, `manjaro`, `cachyos`, `endeavouros`, or an exact matching `ID_LIKE` token | `pacman` |
 | Debian | `debian`, `ubuntu`, `linuxmint`, `pop`, or an exact matching `ID_LIKE` token | `apt-get` |
+| Fedora | `fedora`, `nobara`, `ultramarine`, or an exact matching `ID_LIKE` token | `dnf` (DNF4/DNF5) |
 | Other | No supported ID/ancestry match | Config linking only |
 
-Detection reads `/etc/os-release`, checks `ID` first, then the ancestry tokens in `ID_LIKE`. It does not classify a distro merely because its name contains the letters `arch` or `debian`.
+Detection reads `/etc/os-release`, checks `ID` first, then the ancestry tokens in `ID_LIKE`. It does not classify a distro merely because its name contains the letters `arch`, `debian`, or `fedora`.
+
+Fedora Atomic/OSTree desktops (such as Silverblue and Kinoite) support config-only linking. Host package installation needs their image-based workflow; this installer stops before attempting DNF host changes. Traditional Fedora Workstation/Server and DNF-based containers use the Fedora backend.
 
 On another distribution, these remain available:
 
@@ -103,7 +107,7 @@ The wizard proceeds through:
 6. Docker service/group questions if Docker was selected and installation is enabled.
 7. A resolved plan and final confirmation.
 
-Press Enter to accept a displayed shell/terminal default. Yes/no questions default to **no**. Answer `y` to select an optional tool or accept installation.
+Use **Up/Down** (or `j`/`k`) to highlight an option and **Enter** to select it. Number keys also highlight an option; `q` cancels setup. Shell/terminal menus start on the detected default. Yes/no menus, including the final confirmation, default to **no**; `y`/`n` followed by Enter also works. These menus need no extra package.
 
 Dependencies already implied by the chosen shell or a tool are omitted from later tool questions. For example, choosing Zsh does not ask you separately to select Starship, fzf, nvm, eza, or its plugins. Choosing tmux automatically includes its fzf/plugin requirements. Plugin-manager internals are not standalone wizard questions.
 
@@ -239,7 +243,8 @@ When a resolved requirement has a repository config (`nvim`, `tmux`, or `starshi
 
 Manual download prerequisites are scoped to the installer using them:
 
-- Debian Starship downloads need certificate/downloader/archive utilities.
+- Debian/Fedora Starship downloads need certificate/downloader/archive utilities.
+- Fedora lf uses an upstream standalone release in `~/.local/bin`, with downloader/archive prerequisites.
 - nvm/Node downloads need certificate/downloader/archive utilities.
 - AWS needs its downloader and supporting archive/signature/documentation packages.
 - A missing Debian Docker engine needs the certificate/downloader path for its signed repository key.
@@ -317,7 +322,7 @@ The installer adds `~/.local/bin` to its own PATH before probes.
 
 A Node probe recognizes an installed LTS release, not whether it is the newest release or still within its upstream support window. Other PATH checks generally do not enforce versions. Version compatibility still matters for the imported configs.
 
-Repeat runs preserve valid existing programs/plugin versions. They install missing profile requirements even if the selected shell itself exists. Matching config links are skipped; links from another checkout are backed up/replaced when applying this checkout.
+Repeat runs preserve compatible existing programs/plugin versions. Neovim is also checked against the configuration minimum version. They install missing profile requirements even if the selected shell itself exists. Matching config links are skipped; links from another checkout are backed up/replaced when applying this checkout.
 
 If all resolved tools are present, no package-manager call/download is needed. Config linking, an explicit global Zsh request, or a required login-shell/Docker service change can still occur. Setup is not an updater: use normal distro/tool/plugin update commands when you want upgrades.
 
@@ -325,21 +330,25 @@ If all resolved tools are present, no package-manager call/download is needed. C
 
 [packages/components.tsv](packages/components.tsv) maps logical names to repository packages.
 
-| Component | Debian-family package | Arch-family package |
-| --- | --- | --- |
-| Bash / Fish / Zsh | `bash` / `fish` / `zsh` | Same |
-| Git | `git` | `git` |
-| Neovim | `neovim` | `neovim` |
-| Vim | `vim` | `vim` |
-| tmux | `tmux` | `tmux` |
-| fzf / zoxide / bat / ripgrep | Matching package names | Matching package names |
-| fd | `fd-find` | `fd` |
-| Java JDK | `default-jdk` | `jdk-openjdk` |
-| eza / lf / tree / fastfetch | Matching package names | Matching package names |
-| Kitty / Konsole / Alacritty / Ghostty | Matching package names, if available | Matching package names |
-| Clipboard | `xclip`, `wl-clipboard` | Same |
-| `col` | `bsdextrautils` | `util-linux` |
-| CachyOS Fish defaults | Not requested on Debian | `cachyos-fish-config`, only for the CachyOS profile branch |
+| Component | Debian-family package | Arch-family package | Fedora-family package |
+| --- | --- | --- | --- |
+| Bash / Fish / Zsh | `bash` / `fish` / `zsh` | Same | Same |
+| Git / Neovim / tmux | `git` / `neovim` / `tmux` | Same | Same |
+| Vim | `vim` | `vim` | `vim-enhanced` |
+| fzf / zoxide / bat / ripgrep | Matching package names | Same | Same |
+| fd | `fd-find` | `fd` | `fd-find` (executable `fd`) |
+| Java JDK | `default-jdk` | `jdk-openjdk` | `java-21-openjdk-devel` |
+| Python + venv | `python3`, `python3-venv` | `python` | `python3`, `python3-pip` |
+| Go | `golang-go` | `go` | `golang` |
+| C compiler / make | `gcc`, `make` | Same | Same |
+| Tree-sitter CLI | Upstream binary | `tree-sitter-cli` | `tree-sitter-cli` |
+| eza / tree / fastfetch | Matching package names | Same | Same |
+| lf | `lf` | `lf` | Upstream r42 binary |
+| Kitty / Konsole / Alacritty / Ghostty | Matching package names, if available | Same | Same, from configured repositories |
+| Clipboard | `xclip`, `wl-clipboard` | Same | Same |
+| `col` | `bsdextrautils` | `util-linux` | `util-linux` |
+| `chsh` (when needed for login-shell activation) | `passwd` | `util-linux` | `util-linux` |
+| CachyOS Fish defaults | Not requested | `cachyos-fish-config`, only on CachyOS | Not requested |
 
 Vendor-managed components such as nvm, AWS, Codex, and Zsh plugins have dedicated installers instead of a universal repository mapping. Starship and Docker also use distro-specific/vendor paths.
 
@@ -363,7 +372,31 @@ sudo pacman -S --needed --noconfirm -- <missing-packages>
 
 The script does not refresh the database with `-y`, force a full upgrade, or install an AUR helper. If mirrors no longer provide versions in your stale database, update the system normally with `sudo pacman -Syu`, then rerun setup.
 
+### DNF
+
+Fedora-family installs query the RPM database to omit already-installed packages, then use syntax shared by DNF4 and DNF5:
+
+```text
+sudo dnf --refresh install -y -- <missing-packages>
+```
+
+Unavailable package names or dependency conflicts abort the transaction before config linking. Setup does not use `--skip-unavailable`, `--allowerasing`, or a system-wide upgrade. Starship and lf use upstream user installations; Docker uses Fedora's native Moby stack. Ghostty may require a separately configured repository on Debian/Fedora; setup does not automatically enable PPAs or COPRs. See [Ghostty's package guidance](https://ghostty.org/docs/install/binary).
+
 Repository availability and versions vary. For example, older APT releases may lack eza/Ghostty or provide Neovim/fzf versions older than the configs expect. Installed tools are normally skipped rather than silently replaced with newer builds.
+
+## Listing aliases
+
+Run `aliases` in Bash, Fish, or Zsh to list every alias currently loaded, including personal overrides and aliases defined during the session. Open a new shell after installing these changes. Fish's alias wrappers are included; ordinary functions are separate.
+
+To browse this checkout's configured aliases across shells without changing shells or installing anything:
+
+```bash
+./bin/dotfiles aliases                  # All installed shells, grouped by shell
+./bin/dotfiles aliases --shell fish     # Fish configuration only
+./bin/dotfiles aliases --shell auto     # Detected login-shell family
+```
+
+The CLI reads the repository configuration using clean, noninteractive shells, so it works before configs are linked. It resolves OS-specific and executable-specific aliases on the current machine. Missing shells are reported and skipped in the combined listing; an explicitly requested missing shell reports an error. CLI output includes repository aliases; use the live `aliases` function for personal/session additions. Neither command executes the listed aliases.
 
 ## Shell configuration
 
@@ -374,7 +407,7 @@ Repository availability and versions vary. For example, older APT releases may l
 - Neovim is the default editor unless already set through the shared environment.
 - Personal binaries and nvm-sh are loaded when available.
 - Starship, zoxide, and optional fzf shell initialization are guarded by availability.
-- APT/pacman aliases use the shared distro detector.
+- `update`, `install`, `remove`, and `search` use shared APT/pacman/DNF mappings from `shell/common/package-aliases.tsv` in Bash, Fish, and Zsh. Distribution ancestry comes from `ID`/`ID_LIKE`, without release-version checks.
 - Debian fd/bat executable names receive conventional aliases.
 - Local overrides load last from `$XDG_CONFIG_HOME/bash/local.bash`.
 
@@ -382,11 +415,13 @@ Repository availability and versions vary. For example, older APT releases may l
 
 [config/fish](config/fish) starts from your imported system config, plugin sources, completions, and universal preferences. Fisher, Tide, and native nvm.fish source files are bundled. Starship is activated by your main interactive configuration.
 
-The portable `conf.d/dotfiles-environment.fish` layer adds the personal PATH, reads the shared distro detector, and handles Debian's alternate bat/fd names. CachyOS defaults load only on CachyOS when available. APT and pacman aliases select the appropriate family; duplicate fzf initialization was removed.
+The portable `conf.d/dotfiles-environment.fish` layer adds the personal PATH, reads the shared distro detector, and handles Debian's alternate bat/fd names. CachyOS defaults load only on CachyOS when available. APT, pacman and DNF aliases load the same mappings as Bash/Zsh; duplicate fzf initialization was removed.
+
+Fish config-editing shortcuts honor `$XDG_CONFIG_HOME`; `xcopy` uses xclip or falls back to wl-copy. The man pager uses the actual bat/batcat executable.
 
 Your main configuration retains the Git/Docker/tmux helpers, Fish-style fzf appearance and previews, `EDITOR=vim`, `VISUAL=vim`, and interactive LTS activation. Fish uses zoxide-backed `cd` interactively when zoxide is present; noninteractive `cd` keeps its native behavior.
 
-Examples include `killfzf`, `gcofzf`, `dbf`, smart no-argument `tmux`, Git shortcuts, Docker/Compose shortcuts, and tmux save/restore commands. The imported `dcud`/`nb` spellings remain in Fish; the corresponding Zsh aliases have the corrections described below.
+Examples include `killfzf`, `gcofzf`, `dbf`, smart no-argument `tmux`, Git shortcuts, Docker/Compose shortcuts, and tmux save/restore commands. `dcud` runs `docker compose up -d` and `nb` runs `npm run build` in both Fish and Zsh.
 
 `fish_variables` is included to retain universal prompt settings and Fisher inventory. Fish can update that file at runtime through the linked directory. Review such changes before committing; histories and credentials are not intended repository content.
 
@@ -450,7 +485,7 @@ They are cloned during installation into `$XDG_DATA_HOME/zsh/plugins`, or `ZPLUG
 ./bin/dotfiles setup --shell zsh --terminal none --tools none --system-zshenv --yes
 ```
 
-This appends [config/zsh/system-zshenv.zsh](config/zsh/system-zshenv.zsh) to `/etc/zsh/zshenv` without replacing distro content. An existing file is backed up to the run's `system/zshenv` archive; a marker prevents repeated appends. `ZSH_GLOBAL_ENV_FILE` selects another global path if your Zsh build uses one.
+This appends [config/zsh/system-zshenv.zsh](config/zsh/system-zshenv.zsh) to the distro startup file (`/etc/zsh/zshenv` on Debian; `/etc/zshenv` on Arch/Fedora) without replacing distro content. An existing file is backed up to the run's `system/zshenv` archive; a marker prevents repeated appends. `ZSH_GLOBAL_ENV_FILE` selects another global path if your Zsh build uses one.
 
 The fragment defaults `XDG_CONFIG_HOME` when needed and redirects startup to its `zsh` directory when the directory exists and startup-file reading is enabled. The user-level bootstrap works without this system change.
 
@@ -465,7 +500,7 @@ The project includes your full system Lua setup rather than a minimal starter:
 - `lazy-lock.json`, StyLua settings, and the YAML ftplugin.
 - Tokyo Night theme, lualine, bufferline, Neo-tree, Telescope, completion, formatting, linting, Treesitter, Mason, and local Minuet/Ollama completion.
 
-The imported setup documents **Neovim 0.11.3+**. The installer uses the distro Neovim package and does not automatically choose a newer binary if your repository version is older.
+The configuration requires **Neovim 0.11.3+**. Setup checks the actual version. A missing editor is first requested through the distro package manager. If that package or an existing executable is too old, setup installs the [upstream v0.11.5 runtime](https://github.com/neovim/neovim/releases/tag/v0.11.5) under `$XDG_DATA_HOME/dotfiles/neovim/v0.11.5` and links `~/.local/bin/nvim`. The distro package remains installed. Any previous user launcher is backed up; compatible editors are skipped. The fallback covers Linux x86_64/aarch64 and verifies the downloaded binary can run before activating it.
 
 Automatic dependency resolution supplies the system runtimes, build tools, search tools, clipboard helpers, and download/archive utilities required by this configuration. It does **not** execute every Neovim language-tool/parser/model installation. On a fresh machine, after meeting the requirements in [config/nvim/README.md](config/nvim/README.md), use:
 
@@ -475,7 +510,7 @@ Automatic dependency resolution supplies the system runtimes, build tools, searc
 :TreesitterInstall
 ```
 
-Use `:checkhealth`, `:Mason`, `:ConformInfo`, and `:checkhealth vim.lsp` to inspect the setup. Node/npm, Python with venv support, Go, a C compiler, tree-sitter CLI, and an appropriate JDK are required by particular language/build workflows. Selecting Neovim installs these requirements even when Neovim itself is already present. Arch uses its Tree-sitter CLI package; Debian/Ubuntu uses the upstream v0.26.11 binary in `~/.local/bin` (x86_64/aarch64).
+Use `:checkhealth`, `:Mason`, `:ConformInfo`, and `:checkhealth vim.lsp` to inspect the setup. Node/npm, Python with venv support, Go, a C compiler, tree-sitter CLI, and an appropriate JDK are required by particular language/build workflows. Selecting Neovim installs these requirements even when Neovim itself is already present. Arch/Fedora use their Tree-sitter CLI packages; Debian/Ubuntu uses the upstream v0.26.11 binary in `~/.local/bin` (x86_64/aarch64).
 
 The configuration covers Python, JavaScript/TypeScript/React, web files, Django templates, Bash, Docker/Compose, SQL, Java, XML, JSON, and YAML. It recognizes active Python environments or project `.venv`/`venv`; `:PythonInterpreter /path/to/bin/python` changes the running session's interpreter. Project dependencies/configurations still supply type information, ESLint/Tailwind rules, SQL connections, and formatter settings.
 
@@ -545,7 +580,7 @@ A font containing the prompt/editor icon glyphs is needed for those icons; choos
 
 ### Java
 
-`java` installs `default-jdk` on Debian derivatives or `jdk-openjdk` on Arch derivatives. `javac` is the installed-tool probe. The JDK version follows your configured repositories; this is not SDKMAN or a pinned Java-version manager.
+`java` installs `default-jdk` on Debian derivatives, `jdk-openjdk` on Arch derivatives, or `java-21-openjdk-devel` on Fedora derivatives. `javac` is the installed-tool probe. The JDK version follows your configured repositories; this is not SDKMAN or a pinned Java-version manager.
 
 ```bash
 ./bin/dotfiles packages --tools java --yes
@@ -588,6 +623,8 @@ AWS credentials are not imported into the repository or generated by this setup.
 Docker is considered installed when the CLI exists and `docker compose version` succeeds. That check does not require contacting a running daemon. Setup does not claim that the daemon is running merely because the CLI/plugin is present.
 
 Arch uses `docker`, `docker-compose`, and `docker-buildx` for a missing engine, preserving existing engine/Compose pieces where possible.
+
+Fedora uses `moby-engine`, `docker-cli`, `docker-buildx`, and `docker-compose` from configured distro repositories. Fedora's [Compose package](https://packages.fedoraproject.org/pkgs/docker-compose/docker-compose/fedora-43.html) installs the CLI plugin used by `docker compose`. If the engine already exists, only missing Compose is requested. An installed `podman-docker` provider is reported as a conflict rather than treated as Docker or automatically removed. Podman itself can remain installed.
 
 For a missing Debian/Ubuntu engine, the installer:
 
@@ -682,7 +719,7 @@ For ordinary targets under HOME, the original relative path is retained. For exa
 ~/.bashrc                 -> <run>/.bashrc
 ~/.config/nvim/           -> <run>/.config/nvim/
 ~/.tmux.conf              -> <run>/.tmux.conf
-/etc/zsh/zshenv (optional)-> <run>/system/zshenv
+distro global zshenv (optional) -> <run>/system/zshenv
 ```
 
 Fish, Neovim, tmux support, and supported terminal directories are linked as whole directories. Zsh files and the Konsole scheme are managed individually. Symlink destinations are absolute paths into this checkout, so **keep the checkout at the same location** while the links are active.
@@ -738,7 +775,7 @@ There is no automatic system rollback. If a later step fails, earlier package in
 | `ZPLUGINDIR` | `$XDG_DATA_HOME/zsh/plugins`; use consistently during install and startup |
 | `DOCKER_DISTRO` | Optional upstream base `debian` or `ubuntu` |
 | `DOCKER_CODENAME` | Optional corresponding upstream release codename |
-| `ZSH_GLOBAL_ENV_FILE` | `/etc/zsh/zshenv`; destination when the global flag is selected |
+| `ZSH_GLOBAL_ENV_FILE` | `/etc/zsh/zshenv` on Debian; `/etc/zshenv` on Arch/Fedora; override for custom Zsh builds |
 | `OS_RELEASE_FILE` | `/etc/os-release`; alternate metadata source, primarily for tests |
 | `SHELLS_FILE` | `/etc/shells`; alternate registered-shell list, primarily for tests |
 
@@ -753,6 +790,7 @@ The library computes `ROOT` from the entrypoint location, so normal commands wor
 | Symptom | Meaning / next step |
 | --- | --- |
 | `Unsupported distro` | Use config-only commands or add a supported package-family implementation |
+| DNF reports `No match for argument ...` | Enable a suitable repository or choose another optional tool; no third-party repositories are enabled automatically |
 | `No APT candidate for ...` | Enable a suitable repository, choose another optional tool/terminal, or meet a required profile package before applying that profile |
 | Pacman download failures after long inactivity | Refresh/upgrade normally with `sudo pacman -Syu`, then retry |
 | Shell is installed but not default | Setup may have used `--keep-shell`/config-only mode; otherwise inspect `chsh` result and log out/back in |
@@ -765,12 +803,12 @@ The library computes `ROOT` from the entrypoint location, so normal commands wor
 | `docker compose` unavailable with an existing engine | A compatible v2 package is required; the script preserves the engine if none is available |
 | Neovim fails after linking | Check its required version and application README; restore prior config if needed |
 | Prompt icons look wrong | Select a font containing the configured glyphs |
-| tmux popup fails with custom XDG paths | Adjust the retained fixed `~/.config/tmux` binding |
+| Fedora Atomic host package installation rejected | Use `--no-packages` for host configs and provision packages using the OS image workflow |
 
 Additional limits:
 
-- Repository versions, not universal upstream latest versions, are used for distro packages.
-- Selecting Java does not pin a particular Java LTS; installed tools are generally not upgraded.
+- Repository versions, not universal upstream latest versions, are used for distro packages. Neovim gets a user runtime fallback when the distro binary is too old (Linux x86_64/aarch64); the downloaded binary must be compatible with the host glibc. Package-family support does not guarantee every optional package exists in every release.
+- Fedora selects Java 21; Debian/Arch follow their distro JDK versions. JDTLS requires a recent JDK (21+); installed tools are generally not upgraded.
 - Fonts, desktop terminal associations, user credentials, Git identity, SSH configuration, project environments, and local Ollama models are not provisioned.
 - `install --all` manages every template, including several shells and whole application directories; preview its target list first.
 - No general AUR-helper installation, automatic restoration command, or complete system rollback is provided.
@@ -792,8 +830,8 @@ lib/installers/node.sh          nvm-sh/native Fish Node/Codex
 lib/installers/aws.sh            Per-user AWS CLI
 lib/installers/docker.sh         Repository, engine/Compose, service/group actions
 lib/installers/zsh.sh            Zsh plugins and optional global bootstrap
-lib/installers/extras.sh         Starship and tmux plugin bundle
-packages/components.tsv         Logical component -> APT/pacman names
+lib/installers/extras.sh         User runtime fallbacks, Starship and tmux plugins
+packages/components.tsv         Logical component -> APT/pacman/DNF names
 packages/dependencies.tsv       Profile/tool -> automatic requirements
 packages/tmux-plugins.tsv       tmux repositories and required entrypoints
 shell/common/                   Bash/reusable environment, aliases, functions
@@ -831,16 +869,16 @@ Install Python 3, Bash, Fish, and Zsh to run the behavior suite:
 python3 -m unittest discover -s tests -v
 ```
 
-The current suite contains **59 tests**. It uses temporary homes/XDG directories, synthetic distro metadata, a restricted PATH, mocked package/network commands, and pseudo-terminals for real prompt behavior. It does not perform real package installations or contact upstream download hosts.
+The suite uses temporary homes/XDG directories, synthetic distro metadata, a restricted PATH, mocked package/network commands, and pseudo-terminals for real prompt behavior. It does not perform real package installations or contact upstream download hosts.
 
 Coverage includes:
 
-- Whole-token Debian/Arch detection and unsupported-distro config-only behavior.
+- Whole-token Debian/Arch/Fedora detection and unsupported-distro config-only behavior.
 - Dependency recursion/deduplication, automatic shell profiles, hidden dependency questions, standalone Java/Node isolation.
 - Backups, matching-link skips, ownership-safe removal, tmux's startup link, and Zsh support links.
 - Shell installation/default activation, already-default skips, stale `$SHELL`, registered-shell validation, opt-outs.
 - AWS install/skip behavior, nvm LTS handling, native Fish Codex detection.
-- Debian/Arch plans, Docker conflicts, Compose-only preservation, explicit service settings.
+- Debian/Arch/Fedora plans, RPM package skipping, Docker/Podman provider conflicts, Compose-only preservation, explicit service settings.
 - Quiet XDG Zsh startup, history/completion, aliases, keybindings, fzf quoting/option restoration, lf directory changes.
 - Plugin bundles, partial installs, repeat runs, startup without download attempts.
 - Portable Fish startup and repeatable global-zshenv merging inside a temporary fixture.
@@ -870,6 +908,9 @@ A passing mocked suite is not a real package-download, daemon, terminal-renderin
 - [Native nvm.fish](https://github.com/jorgebucaran/nvm.fish)
 - [Starship](https://starship.rs/guide/)
 - [AWS CLI installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [Fedora package catalog](https://packages.fedoraproject.org/)
+- [DNF5 install command](https://dnf5.readthedocs.io/en/latest/commands/install.8.html)
+- [lf upstream releases](https://github.com/gokcehan/lf/releases)
 - [Docker on Debian](https://docs.docker.com/engine/install/debian/)
 - [Docker on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
 - [Codex CLI](https://learn.chatgpt.com/docs/codex/cli)

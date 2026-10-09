@@ -30,15 +30,22 @@ alias grep="grep --color=auto"
 
 alias home="cd ~"
 
-if status is-interactive; and type -q zoxide
-    alias cd="z"
+# Inspection includes interactive aliases without starting shell integrations.
+if status is-interactive; or set -q DOTFILES_ALIAS_LISTING
+    if type -q zoxide
+        alias cd="z"
+    end
 end
 
-alias cfish="nvim ~/.config/fish/config.fish"
+alias cfish='nvim "$XDG_CONFIG_HOME/fish/config.fish"'
 
-alias cnvim="nvim ~/.config/nvim"
+alias cnvim='nvim "$XDG_CONFIG_HOME/nvim"'
 
-alias xcopy="xclip -selection clipboard"
+if command -q xclip
+    alias xcopy="xclip -selection clipboard"
+else if command -q wl-copy
+    alias xcopy="wl-copy"
+end
 
 alias sen="sudo systemctl enable --now"
 alias sstatus="sudo systemctl status"
@@ -115,19 +122,22 @@ function gcofzf
 end
 
 #=====================
-# Pacman/CachyOS
+# Package management (Arch, Debian and Fedora families)
 #=====================
-switch "$DOTFILES_OS_FAMILY"
-    case arch
-        alias update="sudo pacman -Syu"
-        alias install="sudo pacman -S"
-        alias remove="sudo pacman -Rns"
-        alias search="pacman -Ss"
-    case debian
-        alias update="sudo apt update && sudo apt upgrade"
-        alias install="sudo apt install"
-        alias remove="sudo apt remove"
-        alias search="apt-cache search"
+if contains -- "$DOTFILES_OS_FAMILY" arch debian fedora
+    for package_alias in (command cat "$DOTFILES_HOME/shell/common/package-aliases.tsv")
+        set -l fields (string split \t -- "$package_alias")
+        if string match -q '#*' -- "$fields[1]"
+            continue
+        end
+        if test "$DOTFILES_OS_FAMILY" = arch
+            alias "$fields[1]" "$fields[2]"
+        else if test "$DOTFILES_OS_FAMILY" = debian
+            alias "$fields[1]" "$fields[3]"
+        else
+            alias "$fields[1]" "$fields[4]"
+        end
+    end
 end
 
 #=====================
@@ -162,7 +172,7 @@ alias dcr="docker compose run"
 alias dcb="docker compose build"
 alias dcub="docker compose up --build"
 alias dcu="docker compose up"
-alias dcud="docker compose -d"
+alias dcud="docker compose up -d"
 alias dcuro="docker compose up --remove-orphans"
 alias dcudro="docker compose up -d --remove-orphans"
 alias dcdro="docker compose down --remove-orphans"
@@ -175,7 +185,7 @@ alias dcuw="docker compose up --watch"
 #=====================
 # Automatically activate the LTS Node version
 if status is-interactive
-    if type -q nvm
+    if type -q nvm; and test -r "$nvm_data/.index"
         nvm use lts --silent
     end
 end
@@ -183,7 +193,7 @@ end
 alias ni="npm install"
 alias nt="npm test"
 alias nrd="npm run dev"
-alias nb="npm build"
+alias nb="npm run build"
 
 #=====================
 # Tmux
@@ -272,7 +282,16 @@ set -gx FZF_CTRL_R_OPTS "\
 # config-only installs and noninteractive scripts to start without noisy errors.
 if status is-interactive
     if type -q fzf
-        fzf --fish 2>/dev/null | source
+        if fzf --fish >/dev/null 2>&1
+            fzf --fish 2>/dev/null | source
+        else
+            for fzf_directory in $HOME/.fzf/shell /usr/share/fzf /usr/share/fzf/shell /usr/share/doc/fzf/examples
+                if test -r "$fzf_directory/key-bindings.fish"
+                    source "$fzf_directory/key-bindings.fish"
+                    break
+                end
+            end
+        end
     end
     if type -q zoxide
         zoxide init fish | source

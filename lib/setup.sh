@@ -1,24 +1,61 @@
 #!/usr/bin/env bash
-# Arguments: destination variable name, question, default, allowed choices.
-# printf -v assigns the answer by variable name without evaluating user input.
+# A built-in menu works before optional tools such as fzf are installed.
+# Read single keys without changing persistent terminal settings. All rendering
+# goes to stderr; printf -v returns the logical value to the caller.
 prompt_choice() {
-    local variable="$1" label="$2" default="$3" answer
+    local variable="$1" label="$2" default="$3"
     shift 3
+    local -a menu_options=("$@")
+    local menu_index=0 menu_row menu_key menu_sequence menu_drawn=0
+    for menu_row in "${!menu_options[@]}"; do
+        [[ "${menu_options[menu_row]}" != "$default" ]] || menu_index="$menu_row"
+    done
     while true; do
-        read -r -p "$label ($*) [$default]: " answer || die 'Input closed'
-        answer="${answer:-$default}"
-        if [[ " $* " == *" $answer "* ]]; then printf -v "$variable" '%s' "$answer"; return; fi
-        printf 'Choose one of: %s\n' "$*"
+        if ((menu_drawn)); then printf '\033[%dA' "$((${#menu_options[@]} + 2))" >&2; fi
+        printf '\r\033[2K%s\n' "$label" >&2
+        for menu_row in "${!menu_options[@]}"; do
+            if ((menu_row == menu_index)); then
+                printf '\r\033[2K > %d) %s\n' "$((menu_row + 1))" "${menu_options[menu_row]}" >&2
+            else
+                printf '\r\033[2K   %d) %s\n' "$((menu_row + 1))" "${menu_options[menu_row]}" >&2
+            fi
+        done
+        printf '\r\033[2KUp/Down: move | Enter: select | number: highlight | q: cancel\n' >&2
+        menu_drawn=1
+        IFS= read -r -s -n 1 menu_key || die 'Input closed'
+        case "$menu_key" in
+            '') printf -v "$variable" '%s' "${menu_options[menu_index]}"; return ;;
+            $'\033')
+                menu_sequence=''
+                IFS= read -r -s -n 1 -t 0.2 menu_sequence || true
+                if [[ "$menu_sequence" == '[' || "$menu_sequence" == O ]]; then
+                    IFS= read -r -s -n 1 -t 0.2 menu_sequence || true
+                    case "$menu_sequence" in
+                        A) menu_index=$(((menu_index + ${#menu_options[@]} - 1) % ${#menu_options[@]})) ;;
+                        B) menu_index=$(((menu_index + 1) % ${#menu_options[@]})) ;;
+                    esac
+                fi ;;
+            k) menu_index=$(((menu_index + ${#menu_options[@]} - 1) % ${#menu_options[@]})) ;;
+            j) menu_index=$(((menu_index + 1) % ${#menu_options[@]})) ;;
+            [1-9])
+                if ((menu_key <= ${#menu_options[@]})); then menu_index=$((menu_key - 1)); fi ;;
+            y|Y|n|N)
+                # Keep familiar shortcuts for the two-option confirmation menus.
+                if [[ "${menu_options[*]}" == 'no yes' ]]; then
+                    case "$menu_key" in y|Y) menu_index=1 ;; n|N) menu_index=0 ;; esac
+                fi ;;
+            q|Q) die 'Selection cancelled' ;;
+        esac
     done
 }
-# Arguments: destination variable name and question. Empty input means no;
-# retry unexpected answers and stop cleanly if stdin closes.
+# Every confirmation defaults to no and uses the same selectable menu.
 prompt_boolean() {
-    local variable="$1" label="$2" answer
-    while true; do
-        read -r -p "$label [y/N]: " answer || die 'Input closed'
-        case "$answer" in y|Y|yes) printf -v "$variable" 1; return ;; ''|n|N|no) printf -v "$variable" 0; return ;; esac
-    done
+    local variable="$1" label="$2" menu_answer
+    prompt_choice menu_answer "$label" no no yes
+    case "$menu_answer" in
+        yes) printf -v "$variable" 1 ;;
+        no) printf -v "$variable" 0 ;;
+    esac
 }
 # Collect preferences only. No packages or configs are changed during these prompts.
 setup_wizard() {
@@ -111,6 +148,10 @@ resolve_setup() {
     [[ "$terminal_choice" == none ]] || { roots+=("$terminal_choice"); append_unique chosen "$terminal_choice"; }
     if [[ -n "$tools" ]]; then IFS=, read -r -a optional_components <<< "$tools"; fi
     roots+=("${optional_components[@]}")
+    if ((login_shell)) && ! command_exists chsh; then
+        if ((no_packages)); then die 'Changing the login shell requires chsh; install it first or omit --login-shell.'; fi
+        roots+=(chsh)
+    fi
     resolve_dependencies "${roots[@]}"
     package_components=("${resolved_components[@]}")
     # A dependency with a bundled config gets that config linked too.
@@ -121,6 +162,9 @@ resolve_setup() {
     # Docker conflict checks run before any package-manager changes.
     if ((!no_packages)); then
         [[ "$family" != unsupported ]] || die 'Unsupported distro: use --no-packages to link configs only.'
+        if [[ "$family" == fedora ]] && fedora_atomic; then
+            die 'Fedora Atomic/OSTree hosts need image-based package management. Use --no-packages to link configs, or run package installation in a DNF-based container.'
+        fi
         plan_installations
         build_packages
         if [[ " ${missing_components[*]} " == *' docker '* ]]; then docker_preflight; fi

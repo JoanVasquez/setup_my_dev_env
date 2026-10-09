@@ -8,6 +8,10 @@ Requires Neovim 0.11.3+, Git, Node.js/npm, Python 3 with venv support, Go (for s
 a C compiler and tree-sitter CLI for parser installation, and a recent JDK
 for JDTLS. Selecting `nvim` in the dotfiles setup/packages installer installs these
 requirements plus make, ripgrep, fd, clipboard helpers, and download/archive utilities.
+Debian, Arch and Fedora have separate package mappings for these runtimes.
+Arch/Fedora use distro Tree-sitter CLI packages; Debian uses an upstream binary.
+Setup supplies an upstream user Neovim runtime if the distro editor is older than
+0.11.3 (Linux x86_64/aarch64). JDTLS needs JDK 21+; check the distro JDK version.
 Use `:checkhealth` to diagnose missing dependencies.
 
 Plugins are managed by Lazy and tools by Mason. On another machine, open

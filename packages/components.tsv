@@ -1,38 +1,40 @@
-# Whitespace-separated columns: logical tool name, APT package name(s), pacman package name(s).
+# Whitespace-separated columns: logical tool name, APT, pacman, and DNF package name(s).
 # Commas group multiple packages in a cell. Vendor installers (AWS/nvm/Docker on Debian)
 # are dispatched in lib/packages.sh instead of being listed as direct package mappings.
-# component Debian-family Arch-family
-bash bash bash
-fish fish fish
-zsh zsh zsh
-git git git
-tmux tmux tmux
-nvim neovim neovim
-fzf fzf fzf
-zoxide zoxide zoxide
-bat bat bat
-ripgrep ripgrep ripgrep
-fd fd-find fd
-java default-jdk jdk-openjdk
-kitty kitty kitty
-konsole konsole konsole
-alacritty alacritty alacritty
-ghostty ghostty ghostty
-clipboard xclip,wl-clipboard xclip,wl-clipboard
-eza eza eza
-lf lf lf
-vim vim vim
-tree tree tree
-fastfetch fastfetch fastfetch
-col bsdextrautils util-linux
-cachyos-fish-config - cachyos-fish-config
+# component Debian-family Arch-family Fedora-family
+bash bash bash bash
+fish fish fish fish
+zsh zsh zsh zsh
+git git git git
+tmux tmux tmux tmux
+nvim neovim neovim neovim
+fzf fzf fzf fzf
+zoxide zoxide zoxide zoxide
+bat bat bat bat
+ripgrep ripgrep ripgrep ripgrep
+fd fd-find fd fd-find
+java default-jdk jdk-openjdk java-21-openjdk-devel
+kitty kitty kitty kitty
+konsole konsole konsole konsole
+alacritty alacritty alacritty alacritty
+ghostty ghostty ghostty ghostty
+clipboard xclip,wl-clipboard xclip,wl-clipboard xclip,wl-clipboard
+eza eza eza eza
+lf lf lf -
+vim vim vim vim-enhanced
+tree tree tree tree
+fastfetch fastfetch fastfetch fastfetch
+col bsdextrautils util-linux util-linux
+cachyos-fish-config - cachyos-fish-config -
 # Neovim runtime/build requirements (resolved automatically).
-python python3,python3-venv python
-go golang-go go
-c-compiler gcc gcc
-make make make
-tree-sitter tree-sitter-cli tree-sitter-cli
-curl curl curl
-tar tar tar
-unzip unzip unzip
-gzip gzip gzip
+python python3,python3-venv python python3,python3-pip
+go golang-go go golang
+c-compiler gcc gcc gcc
+make make make make
+tree-sitter tree-sitter-cli tree-sitter-cli tree-sitter-cli
+curl curl curl curl
+tar tar tar tar
+unzip unzip unzip unzip
+gzip gzip gzip gzip
+# Login-shell activation only; not a shell runtime requirement.
+chsh passwd util-linux util-linux

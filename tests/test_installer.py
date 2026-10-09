@@ -51,11 +51,15 @@ class InstallerTests(unittest.TestCase):
         self.mock_command("getent", 'printf "test:x:1000:1000::%s:%s\\n" "$HOME" "$TEST_ACCOUNT_SHELL"')
         self.mock_command("dpkg-query", 'exit 1')
         self.mock_command("pacman", 'exit 1')
+        self.mock_command("rpm", 'exit 1')
+        self.mock_command("chsh", 'exit 0')
         for var in ("DOCKER_DISTRO", "DOCKER_CODENAME", "NVM_VERSION", "ZDOTDIR", "ZPLUGINDIR", "ZSH_GLOBAL_ENV_FILE", "GPG_TTY"):
             self.env.pop(var, None)
 
     # Write a tiny executable into the restricted PATH to simulate a tool or package command.
     def mock_command(self, name, script):
+        if name == "nvim" and script == "exit 0":
+            script = 'printf "NVIM v0.11.5\\n"'
         target = self.mock / name
         if target.is_symlink():
             target.unlink()
@@ -91,10 +95,10 @@ fi
         self.mock_command("sudo", r'''
 printf "%s\n" "$*" >> "$TEST_LOG"
 case "$*" in
-    "apt-get install "*|"pacman -S "*)
+    "apt-get install "*|"pacman -S "*|"dnf --refresh install "*)
         for package in "$@"; do
             case "$package" in
-                docker|docker-ce|docker-compose|docker-compose-plugin|docker-compose-v2)
+                docker|docker-ce|moby-engine|docker-cli|docker-compose|docker-compose-plugin|docker-compose-v2)
                     printf '#!/usr/bin/env bash\nprintf "Docker Compose version v2.test\\n"\n' > "$TEST_BIN/docker"
                     chmod +x "$TEST_BIN/docker" ;;
                 fish|zsh)
@@ -102,18 +106,20 @@ case "$*" in
                     printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$package"
                     chmod +x "$TEST_BIN/$package" ;;
                 python3|python) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/python3"; chmod +x "$TEST_BIN/python3" ;;
-                gcc|make|golang-go|go|tree-sitter-cli)
+                gcc|make|golang-go|golang|go|tree-sitter-cli)
                     binary="$package"
-                    [[ "$package" != golang-go ]] || binary=go
+                    [[ "$package" != golang-go && "$package" != golang ]] || binary=go
                     [[ "$package" != tree-sitter-cli ]] || binary=tree-sitter
                     printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$binary"; chmod +x "$TEST_BIN/$binary" ;;
-                neovim) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/nvim"; chmod +x "$TEST_BIN/nvim" ;;
+                neovim) printf '#!/usr/bin/env bash\nprintf "NVIM v0.11.5\\n"\n' > "$TEST_BIN/nvim"; chmod +x "$TEST_BIN/nvim" ;;
                 zoxide|fzf|bat|fd|rg|eza|lf|vim|tree|xclip|wl-copy|fastfetch|col|tmux|starship) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$package"; chmod +x "$TEST_BIN/$package" ;;
                 util-linux|bsdextrautils) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/col"; chmod +x "$TEST_BIN/col" ;;
+                passwd) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/chsh"; chmod +x "$TEST_BIN/chsh" ;;
+                vim-enhanced) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/vim"; chmod +x "$TEST_BIN/vim" ;;
                 fd-find) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/fdfind"; chmod +x "$TEST_BIN/fdfind" ;;
                 ripgrep) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/rg"; chmod +x "$TEST_BIN/rg" ;;
                 wl-clipboard) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/wl-copy"; chmod +x "$TEST_BIN/wl-copy" ;;
-                default-jdk|jdk-openjdk) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/javac"; chmod +x "$TEST_BIN/javac" ;;
+                default-jdk|jdk-openjdk|java-21-openjdk-devel) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/javac"; chmod +x "$TEST_BIN/javac" ;;
             esac
             printf '%s\n' "$package" >> "$TEST_PACKAGES"
         done ;;
@@ -122,6 +128,8 @@ esac
         self.mock_command("apt-cache", 'printf "  Candidate: 1.0\\n"')
         self.mock_command("dpkg-query", 'if [[ -f "$TEST_PACKAGES" ]] && grep -Fxq "${!#}" "$TEST_PACKAGES"; then printf "install ok installed"; else exit 1; fi')
         self.mock_command("pacman", '[[ -f "$TEST_PACKAGES" ]] && grep -Fxq "${!#}" "$TEST_PACKAGES"')
+        self.mock_command("rpm", '[[ -f "$TEST_PACKAGES" ]] && grep -Fxq "${!#}" "$TEST_PACKAGES"')
+        self.mock_command("dnf", 'exit 0')
         self.mock_command("dpkg", 'printf "amd64\\n"')
         self.mock_command("npm", r'''printf "npm %s\n" "$*" >> "$TEST_LOG"
 printf '#!/usr/bin/env bash\nprintf "codex test\\n"\n' > "$TEST_BIN/codex"
@@ -137,6 +145,17 @@ while (($#)); do
     shift
 done
 case "$url" in
+    */nvim-linux-*.tar.gz)
+        archive="${url##*/}"
+        archive="${archive%.tar.gz}"
+        mkdir -p "$TEST_BIN/neovim-release/$archive/bin"
+        printf '#!/usr/bin/env bash\nprintf "NVIM v0.11.5\\n"\n' > "$TEST_BIN/neovim-release/$archive/bin/nvim"
+        chmod +x "$TEST_BIN/neovim-release/$archive/bin/nvim"
+        tar -czf "$output" -C "$TEST_BIN/neovim-release" "$archive" ;;
+    */lf-linux-*.tar.gz)
+        mkdir -p "$TEST_BIN/lf-release"
+        printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/lf-release/lf"
+        tar -czf "$output" -C "$TEST_BIN/lf-release" lf ;;
     */tree-sitter-linux-*.gz)
         printf '#!/usr/bin/env bash\nexit 0\n' | gzip > "$output" ;;
     */nvm/*/install.sh)
@@ -228,6 +247,7 @@ esac
         for distro, packages in (
             ("ubuntu", ("python3", "python3-venv", "golang-go", "default-jdk", "gcc", "make", "ripgrep", "fd-find", "xclip", "wl-clipboard", "unzip")),
             ("arch", ("python", "go", "jdk-openjdk", "gcc", "make", "tree-sitter-cli", "ripgrep", "fd", "xclip", "wl-clipboard", "unzip")),
+            ("fedora", ("python3", "python3-pip", "golang", "java-21-openjdk-devel", "gcc", "make", "tree-sitter-cli", "ripgrep", "fd-find", "xclip", "wl-clipboard", "unzip")),
         ):
             self.release.write_text(f"ID={distro}\n")
             output = self.cli("packages", "--tools", "nvim", "--dry-run")
@@ -250,6 +270,45 @@ esac
         output = self.cli("packages", "--tools", "nvim", "--yes")
         self.assertIn("No missing distro packages to install", output)
         self.assertEqual(self.log.read_text(), first_log)
+
+    def test_old_neovim_gets_user_runtime_with_launcher_backup_and_repeat_skip(self):
+        self.seed_shell_dependencies("bash")
+        self.fake_system()
+        launcher = self.home / ".local/bin/nvim"
+        launcher.parent.mkdir(parents=True, exist_ok=True)
+        old_launcher = '#!/usr/bin/env bash\nprintf "NVIM v0.10.4\\n"\n'
+        launcher.write_text(old_launcher)
+        launcher.chmod(0o755)
+        output = self.cli("packages", "--tools", "nvim", "--yes")
+        self.assertIn("Ensure Neovim v0.11.5 user runtime", output)
+        self.assertIn("Backed up previous Neovim launcher", output)
+        self.assertTrue(launcher.is_symlink())
+        self.assertTrue(launcher.resolve().is_file())
+        backups = list((self.home / ".local/state/dotfiles/backups").glob("*/.local/bin/nvim"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_text(), old_launcher)
+        self.assertNotIn("neovim", self.log.read_text())
+        first_log = self.log.read_text()
+        output = self.cli("packages", "--tools", "nvim", "--yes")
+        self.assertIn("skip: nvim already installed", output)
+        self.assertEqual(self.log.read_text(), first_log)
+
+    def test_neovim_version_requirement_and_download_failure_preserve_existing_binary(self):
+        self.fake_system()
+        self.seed_shell_dependencies("bash")
+        for version, compatible in (("0.10.4", False), ("0.11.2", False),
+                                    ("0.11.3", True), ("0.12.0-dev", True), ("1.0.0", True)):
+            with self.subTest(version=version):
+                self.mock_command("nvim", f'printf "NVIM v{version}\\n"')
+                script = f'source "{ROOT}/lib/detection.sh"; neovim_compatible'
+                result = subprocess.run(["bash", "-c", script], env=self.env, capture_output=True)
+                self.assertEqual(result.returncode == 0, compatible)
+        self.mock_command("nvim", 'printf "NVIM v0.10.4\\n"')
+        existing = (self.mock / "nvim").read_text()
+        self.mock_command("curl", 'exit 1')
+        self.cli("packages", "--tools", "nvim", "--yes", ok=False)
+        self.assertEqual((self.mock / "nvim").read_text(), existing)
+        self.assertFalse((self.home / ".local/bin/nvim").exists())
 
     def test_java_alone_only_installs_jdk(self):
         self.fake_system()
@@ -307,6 +366,8 @@ esac
         shutil.copytree(ROOT / "config/fish", config)
         (self.home / "lib").mkdir()
         shutil.copy2(ROOT / "lib/platform.sh", self.home / "lib/platform.sh")
+        (self.home / "shell/common").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / "shell/common/package-aliases.tsv", self.home / "shell/common/package-aliases.tsv")
         result = subprocess.run(["fish", "-c", 'echo $DOTFILES_OS_FAMILY; type install; cd /; pwd'], env=self.env,
                                 text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -354,13 +415,68 @@ esac
         self.cli("packages", "--tools", "tmux", "--yes")
         self.assertEqual(self.log.read_text(), before)
 
+    def test_aliases_cli_lists_all_shells_without_installing_or_linking(self):
+        self.mock_command("zoxide", 'printf "should not execute\\n" >&2; exit 1')
+        for distro, expected in (("ubuntu", "sudo apt install"),
+                                 ("arch", "sudo pacman -S"), ("fedora", "sudo dnf install")):
+            with self.subTest(distro=distro):
+                self.release.write_text(f"ID={distro}\n")
+                output = self.cli("aliases")
+                for shell in ("bash", "fish", "zsh"):
+                    self.assertIn(f"[{shell} aliases]", output)
+                install_aliases = [line for line in output.splitlines() if line.startswith("alias install")]
+                self.assertEqual(len(install_aliases), 3)
+                for line in install_aliases:
+                    self.assertIn(expected, line)
+                self.assertIn("docker compose up -d", output)
+                self.assertIn("alias cd z", output)
+                self.assertNotIn("should not execute", output)
+                self.assertFalse(self.log.exists())
+                self.assertEqual(list(self.home.iterdir()), [])
+
+    def test_aliases_cli_single_shell_auto_missing_shell_and_validation(self):
+        output = self.cli("aliases", "--shell", "zsh")
+        self.assertIn("[zsh aliases]", output)
+        self.assertNotIn("[fish aliases]", output)
+        self.assertNotIn("[bash aliases]", output)
+        output = self.cli("aliases", "--shell", "auto")
+        self.assertIn("[bash aliases]", output)
+        self.cli("aliases", "--shell", "none", ok=False)
+        (self.mock / "fish").unlink()
+        output = self.cli("aliases")
+        self.assertIn("[fish] skipped: shell is not installed", output)
+        self.assertIn("[zsh aliases]", output)
+        output = self.cli("aliases", "--shell", "fish", ok=False)
+        self.assertIn("shell is not installed", output)
+        self.cli("aliases", "--tools", "none", ok=False)
+
+    def test_live_aliases_function_includes_session_aliases_in_every_shell(self):
+        for shell in ("bash", "zsh", "fish"):
+            with self.subTest(shell=shell):
+                if shell == "fish":
+                    script = f'source "{ROOT}/config/fish/functions/aliases.fish"\nalias user_example "echo session addition"\naliases'
+                    arguments = ["--no-config", "-c"]
+                else:
+                    filename = "shell/common/functions.sh" if shell == "bash" else "config/zsh/functions.zsh"
+                    script = f'source "{ROOT}/{filename}"\nalias user_example="echo session addition"\naliases'
+                    arguments = ["-fc"]
+                result = subprocess.run([shutil.which(shell), *arguments, script],
+                                        env=self.env, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("user_example", result.stdout)
+                self.assertIn("echo session addition", result.stdout)
+                self.assertFalse(self.log.exists())
+
     def test_token_based_distro_detection(self):
         for metadata, expected in [
             ('ID=cachyos\nID_LIKE=arch\n', 'arch'),
             ('ID=linuxmint\nID_LIKE="ubuntu debian"\n', 'debian'),
             ('ID=custom\nID_LIKE="custom arch"\n', 'arch'),
             ('ID=notarchlinux\n', 'unsupported'),
-            ('ID=fedora\n', 'unsupported')]:
+            ('ID=fedora\n', 'fedora'),
+            ('ID=nobara\n', 'fedora'),
+            ('ID=custom\nID_LIKE="custom fedora"\n', 'fedora'),
+            ('ID=notfedora\nID_LIKE=notdebian\n', 'unsupported')]:
             self.release.write_text(metadata)
             output = self.cli("doctor")
             self.assertIn(f"Detected OS family: {expected}", output)
@@ -398,7 +514,7 @@ esac
             self.assertEqual(list(self.home.iterdir()), [])
 
     def test_unsupported_config_only(self):
-        self.release.write_text("ID=fedora\n")
+        self.release.write_text("ID=alpine\n")
         self.cli("setup", "--no-packages", "--shell", "fish", "--terminal", "none",
                  "--tools", "nvim,tmux,starship,zoxide", "--yes")
         self.assertTrue((self.home / ".config/fish").is_symlink())
@@ -418,6 +534,136 @@ esac
         self.assertIn("npm install -g @openai/codex", log)
         self.assertIn("systemctl enable --now docker", log)
         self.assertTrue((self.home / ".config/fish").is_symlink())
+
+    def test_fedora_dry_run_needs_no_package_manager_and_makes_no_changes(self):
+        self.release.write_text("ID=fedora\n")
+        output = self.cli("setup", "--shell", "zsh", "--terminal", "kitty",
+                          "--tools", "docker,codex,aws", "--dry-run")
+        self.assertIn("dnf --refresh install -y --", output)
+        self.assertIn("moby-engine", output)
+        self.assertIn("Install lf r42", output)
+        self.assertFalse(self.log.exists())
+        self.assertEqual(list(self.home.iterdir()), [])
+
+    def test_fedora_install_plan_and_repeat_skip(self):
+        self.release.write_text("ID=fedora\nVERSION_ID=43\n")
+        self.fake_system()
+        args = ("setup", "--shell", "fish", "--terminal", "kitty", "--keep-shell",
+                "--tools", "nvim,tmux,docker,java,codex,aws,starship", "--yes")
+        output = self.cli(*args)
+        log = self.log.read_text()
+        self.assertIn("dnf --refresh install -y --", log)
+        for package in ("moby-engine", "docker-cli", "docker-buildx", "docker-compose",
+                        "java-21-openjdk-devel", "golang", "python3-pip", "tree-sitter-cli", "gnupg2"):
+            self.assertIn(package, log)
+        for unwanted in ("apt-get", "pacman", "dotfiles-docker.sources", "docker-ce",
+                         "systemctl", "usermod", "--allowerasing", "--skip-unavailable"):
+            self.assertNotIn(unwanted, log)
+        self.assertIn("Install Starship", output)
+        for component in ("fish", "nvim", "tmux", "kitty"):
+            self.assertTrue((self.home / ".config" / component).is_symlink())
+        self.cli(*args)
+        self.assertEqual(self.log.read_text(), log)
+
+    def test_fedora_zsh_profile_installs_lf_without_external_repositories(self):
+        self.release.write_text("ID=ultramarine\nID_LIKE=fedora\n")
+        self.fake_system()
+        args = ("setup", "--shell", "zsh", "--terminal", "none",
+                "--tools", "none", "--keep-shell", "--yes")
+        output = self.cli(*args)
+        self.assertIn("Install lf r42", output)
+        self.assertTrue((self.home / ".local/bin/lf").is_file())
+        self.assertTrue((self.home / ".config/zsh/.zshrc").is_symlink())
+        first_log = self.log.read_text()
+        self.assertNotIn("copr", first_log)
+        self.assertNotIn("apt-get", first_log)
+        self.assertNotIn("pacman", first_log)
+        self.cli(*args)
+        self.assertEqual(self.log.read_text(), first_log)
+
+    def test_fedora_rpm_inventory_skips_installed_packages(self):
+        self.release.write_text("ID=fedora\n")
+        self.fake_system()
+        (self.base / "installed-packages").write_text("java-21-openjdk-devel\n")
+        output = self.cli("packages", "--tools", "java", "--yes")
+        self.assertIn("No missing distro packages to install", output)
+        self.assertFalse(self.log.exists())
+
+    def test_missing_chsh_is_an_automatic_activation_dependency(self):
+        self.release.write_text("ID=fedora\n")
+        self.fake_system()
+        (self.mock / "chsh").unlink()
+        output = self.cli("setup", "--shell", "zsh", "--terminal", "none",
+                          "--tools", "none", "--dry-run")
+        self.assertIn("chsh", output)
+        self.assertIn("util-linux", output)
+        output = self.cli("setup", "--shell", "zsh", "--terminal", "none",
+                          "--tools", "none", "--keep-shell", "--dry-run")
+        self.assertNotIn(" chsh", output)
+        self.assertNotIn("util-linux", output)
+
+    def test_fedora_all_config_templates_link_and_unlink_without_packages(self):
+        self.release.write_text("ID=fedora\n")
+        self.cli("install", "--all", "--yes")
+        for component in ("fish", "nvim", "tmux", "kitty", "alacritty", "ghostty"):
+            self.assertTrue((self.home / ".config" / component).is_symlink())
+        self.assertTrue((self.home / ".local/share/konsole/Moon.colorscheme").is_symlink())
+        self.cli("unlink", "--all", "--yes")
+        self.assertFalse((self.home / ".bashrc").exists())
+        self.assertFalse((self.home / ".config/nvim").exists())
+        self.assertFalse(self.log.exists())
+
+    def test_fedora_existing_engine_gets_only_compose(self):
+        self.release.write_text("ID=fedora\n")
+        self.fake_system()
+        self.mock_command("docker", '[[ "${1:-}" != compose ]]')
+        self.cli("packages", "--tools", "docker", "--yes")
+        self.assertEqual(self.log.read_text(), "dnf --refresh install -y -- docker-compose\n")
+
+    def test_fedora_podman_provider_conflict_fails_before_changes(self):
+        self.release.write_text("ID=fedora\n")
+        self.fake_system()
+        (self.base / "installed-packages").write_text("podman-docker\n")
+        self.mock_command("docker", 'exit 0')
+        output = self.cli("setup", "--shell", "none", "--terminal", "none",
+                          "--tools", "docker", "--yes", ok=False)
+        self.assertIn("conflicts with installed podman-docker", output)
+        self.assertFalse(self.log.exists())
+        self.assertFalse((self.home / ".config").exists())
+
+    def test_fedora_atomic_allows_configs_and_rejects_host_package_installs(self):
+        self.release.write_text("ID=fedora\nVARIANT_ID=silverblue\n")
+        output = self.cli("setup", "--shell", "bash", "--terminal", "none",
+                          "--tools", "none", "--yes", ok=False)
+        self.assertIn("Fedora Atomic/OSTree", output)
+        self.assertFalse((self.home / ".bashrc").exists())
+        self.cli("setup", "--shell", "bash", "--terminal", "none",
+                 "--tools", "none", "--no-packages", "--yes")
+        self.assertTrue((self.home / ".bashrc").is_symlink())
+
+    def test_fedora_unavailable_package_stops_before_config_links(self):
+        self.release.write_text("ID=fedora\n")
+        self.fake_system()
+        self.mock_command("dnf", 'printf "No match for argument: ghostty\\n" >&2; exit 1')
+        self.mock_command("sudo", '"$@"')
+        output = self.cli("setup", "--shell", "none", "--terminal", "ghostty",
+                          "--tools", "none", "--yes", ok=False)
+        self.assertIn("No match for argument: ghostty", output)
+        self.assertFalse((self.home / ".config").exists())
+
+    def test_distro_global_zshenv_defaults_and_override(self):
+        for family, expected in (("debian", "/etc/zsh/zshenv"),
+                                 ("arch", "/etc/zshenv"), ("fedora", "/etc/zshenv")):
+            with self.subTest(family=family):
+                script = f'source "{ROOT}/lib/platform.sh"; family={family}; system_zshenv_path'
+                result = subprocess.run(["bash", "-c", script], env=self.env,
+                                        text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), expected)
+        override_env = dict(self.env, ZSH_GLOBAL_ENV_FILE=str(self.base / "global"))
+        result = subprocess.run(["bash", "-c", script], env=override_env,
+                                text=True, capture_output=True)
+        self.assertEqual(result.stdout.strip(), str(self.base / "global"))
 
     def test_debian_official_docker_and_java(self):
         self.fake_system()
@@ -621,6 +867,33 @@ esac
         result = self.zsh('lf; [[ "$PWD" == "$LF_CHOICE" ]]')
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_legacy_fzf_files_initialize_bash_and_fish(self):
+        self.mock_command("fzf", 'exit 1')
+        directory = self.home / ".fzf/shell"
+        directory.mkdir(parents=True)
+        (directory / "key-bindings.bash").write_text('export FZF_BINDINGS_READY=yes\n')
+        (directory / "completion.bash").write_text('export FZF_COMPLETION_READY=yes\n')
+        script = f'DOTFILES_SHELL=bash\nsource "{ROOT}/shell/common/integrations.sh"\nprintf "%s|%s" "$FZF_BINDINGS_READY" "$FZF_COMPLETION_READY"'
+        result = subprocess.run(["bash", "-c", script], env=self.env,
+                                text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "yes|yes")
+        (directory / "key-bindings.fish").write_text('set -gx FZF_BINDINGS_READY yes\n')
+        script = f'source "{ROOT}/config/fish/conf.d/dotfiles-environment.fish"\nsource "{ROOT}/config/fish/config.fish"\nprintf "%s" "$FZF_BINDINGS_READY"'
+        result = subprocess.run([shutil.which("fish"), "--no-config", "-ic", script],
+                                env=self.env, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "yes")
+        self.assertNotIn("nvm:", result.stderr)
+
+    def test_package_manifest_mapping_errors_are_not_swallowed(self):
+        self.fake_system()
+        script = f'set -euo pipefail\nROOT="{ROOT}"\nsource "$ROOT/lib/core.sh"\nsource "$ROOT/lib/packages.sh"\nfamily=fedora\nmissing_components=(cachyos-fish-config)\npackage_installed() {{ return 1; }}\nbuild_packages'
+        result = subprocess.run(["bash", "-c", script], env=self.env,
+                                text=True, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("No fedora package mapping", result.stderr)
+
     def test_zsh_docker_build_preserves_arguments(self):
         self.cli("install", "--components", "zsh", "--yes")
         self.mock_command("docker", 'printf "%s\n" "$@" > "$TEST_LOG"')
@@ -638,6 +911,70 @@ esac
         self.assertIn("fd=fdfind", result.stdout)
         self.assertIn("fdfind --type f", result.stdout)
         self.assertIn("batcat -l man -p", result.stdout)
+
+    def test_package_aliases_execute_for_all_shells_and_distro_families(self):
+        self.mock_command("sudo", '"$@"')
+        for executable in ("apt", "apt-cache", "pacman", "dnf"):
+            self.mock_command(executable, f'printf "{executable} %s\\n" "$*" >> "$TEST_LOG"')
+        for release, family in (
+            ('ID=ubuntu\nVERSION_ID=22.04\n', "debian"),
+            ('ID=debian\nVERSION_ID=13\n', "debian"),
+            ('ID=linuxmint\n', "debian"),
+            ('ID=pop\n', "debian"),
+            ('ID=custom\nID_LIKE="custom ubuntu debian"\n', "debian"),
+            ('ID=arch\n', "arch"),
+            ('ID=cachyos\n', "arch"),
+            ('ID=custom\nID_LIKE="custom arch"\n', "arch"),
+            ('ID=fedora\nVERSION_ID=43\n', "fedora"),
+            ('ID=nobara\n', "fedora"),
+            ('ID=custom\nID_LIKE="custom fedora"\n', "fedora"),
+        ):
+            self.release.write_text(release)
+            for shell in ("bash", "zsh", "fish"):
+                with self.subTest(release=release, shell=shell):
+                    self.log.unlink(missing_ok=True)
+                    if shell == "fish":
+                        script = f'source "{ROOT}/config/fish/conf.d/dotfiles-environment.fish"\nsource "{ROOT}/config/fish/config.fish"'
+                        arguments = ["--no-config", "-c"]
+                    else:
+                        script = f'DOTFILES_HOME="{ROOT}"\nsource "$DOTFILES_HOME/lib/platform.sh"\nsource "$DOTFILES_HOME/shell/common/platform.sh"'
+                        if shell == "bash":
+                            script = 'shopt -s expand_aliases\n' + script
+                        arguments = ["-fc"]
+                    commands = 'update\ninstall "package name"\nremove old-package\nsearch "search words"\n'
+                    if shell == "zsh":
+                        # Zsh parses a -c script before sourced aliases are defined.
+                        script += "\neval '" + commands + "'"
+                    else:
+                        script += '\n' + commands
+                    result = subprocess.run([shutil.which(shell), *arguments, script],
+                                            env=self.env, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    expected = (
+                        ["apt update", "apt upgrade", "apt install package name", "apt remove old-package", "apt-cache search search words"]
+                        if family == "debian" else
+                        ["dnf upgrade --refresh", "dnf install package name", "dnf remove old-package", "dnf search search words"]
+                        if family == "fedora" else
+                        ["pacman -Syu", "pacman -S package name", "pacman -Rns old-package", "pacman -Ss search words"]
+                    )
+                    self.assertEqual(self.log.read_text().splitlines(), expected)
+
+    def test_fish_debian_names_xdg_paths_and_wayland_clipboard(self):
+        self.mock_command("batcat", 'exit 0')
+        self.mock_command("fdfind", 'exit 0')
+        self.mock_command("wl-copy", 'printf "clipboard\\n" >> "$TEST_LOG"')
+        self.mock_command("nvim", 'printf "%s\\n" "$@" >> "$TEST_LOG"')
+        script = f'source "{ROOT}/config/fish/conf.d/dotfiles-environment.fish"\nsource "{ROOT}/config/fish/config.fish"\n'
+        script += 'cfish\ncnvim\nxcopy\nprintf "%s\\n" "$MANPAGER"\nfunctions bat fd\n'
+        result = subprocess.run([shutil.which("fish"), "--no-config", "-c", script],
+                                env=self.env, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.log.read_text().splitlines(),
+                         [str(self.home / ".config/fish/config.fish"),
+                          str(self.home / ".config/nvim"), "clipboard"])
+        self.assertIn("batcat -l man -p", result.stdout)
+        self.assertIn("batcat $argv", result.stdout)
+        self.assertIn("fdfind $argv", result.stdout)
 
     def test_zsh_ancestry_detection_works_in_both_shells(self):
         self.release.write_text('ID=custom\nID_LIKE="custom debian"\n')
@@ -816,6 +1153,7 @@ fi
         script = r'''
 set -euo pipefail
 source "$1/lib/core.sh"
+source "$1/lib/platform.sh"
 source "$1/lib/installers/zsh.sh"
 ROOT=$1
 backup_dir=$2
@@ -857,6 +1195,8 @@ install_system_zshenv
         shutil.copytree(ROOT / "config/fish", fish_config)
         (self.home / "lib").mkdir(exist_ok=True)
         shutil.copy2(ROOT / "lib/platform.sh", self.home / "lib/platform.sh")
+        (self.home / "shell/common").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / "shell/common/package-aliases.tsv", self.home / "shell/common/package-aliases.tsv")
         result = subprocess.run(["fish", "-c", "type nvm; type install"], env=self.env, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("sudo apt install", result.stdout)
@@ -870,7 +1210,7 @@ install_system_zshenv
                 text=True)
             os.close(slave)
             slave = None
-            os.write(master, b"fish\nnone\ny\n")
+            os.write(master, b"\x1b[B\n\ny\n")
             stdout, stderr = process.communicate(timeout=10)
             self.assertEqual(process.returncode, 0, stdout + stderr)
             self.assertIn("Shell: fish | Terminal: none", stdout)
@@ -881,12 +1221,44 @@ install_system_zshenv
             if slave is not None:
                 os.close(slave)
 
+    def test_confirmation_menu_defaults_navigation_and_cancel(self):
+        for keys, expected, status in (
+            (b"\n", "Cancelled", 0),
+            (b"\x1b[B\n", "Setup complete", 0),
+            (b"\x1b[A\n", "Setup complete", 0),
+            (b"9\n", "Cancelled", 0),
+            (b"q", "Selection cancelled", 1),
+        ):
+            with self.subTest(keys=keys):
+                master, slave = pty.openpty()
+                try:
+                    process = subprocess.Popen(
+                        [str(CLI), "setup", "--no-packages", "--tools", "none",
+                         "--shell", "none", "--terminal", "none"],
+                        env=self.env, stdin=slave, stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE, text=True)
+                    os.close(slave)
+                    slave = None
+                    os.write(master, keys)
+                    stdout, stderr = process.communicate(timeout=10)
+                    self.assertEqual(process.returncode, status, stdout + stderr)
+                    self.assertIn(expected, stdout + stderr)
+                    self.assertIn("1) no", stderr)
+                    self.assertIn("2) yes", stderr)
+                    self.assertFalse((self.home / ".config").exists())
+                finally:
+                    os.close(master)
+                    if slave is not None:
+                        os.close(slave)
+
     def test_native_fish_nvm_activates_lts_and_preserves_errors(self):
         fish_config = self.home / ".config/fish"
         fish_config.parent.mkdir(parents=True)
         shutil.copytree(ROOT / "config/fish", fish_config)
         (self.home / "lib").mkdir(exist_ok=True)
         shutil.copy2(ROOT / "lib/platform.sh", self.home / "lib/platform.sh")
+        (self.home / "shell/common").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / "shell/common/package-aliases.tsv", self.home / "shell/common/package-aliases.tsv")
         directory = self.home / ".local/share/nvm"
         node_bin = directory / "v24.0.0/bin"
         node_bin.mkdir(parents=True)
@@ -916,7 +1288,7 @@ install_system_zshenv
             slave = None
             # Choose Zsh/no terminal, install packages, then accept the plan.
             # There is intentionally no separate make-default prompt.
-            os.write(master, b"zsh\nnone\ny\ny\n")
+            os.write(master, b"3\n\ny\ny\n")
             stdout, stderr = process.communicate(timeout=10)
             self.assertEqual(process.returncode, 0, stdout + stderr)
             self.assertIn("Default login shell set to zsh", stdout)

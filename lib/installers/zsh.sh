@@ -30,7 +30,8 @@ install_zsh_plugins() {
 # distro defaults. The user-level ~/.zshenv bridge works without this system change.
 install_system_zshenv() {
     ((system_zshenv)) || return 0
-    local destination="${ZSH_GLOBAL_ENV_FILE:-/etc/zsh/zshenv}"
+    local destination
+    destination="$(system_zshenv_path)"
     local fragment="$ROOT/config/zsh/system-zshenv.zsh"
     if [[ -r "$destination" ]] && grep -Fxq '# dotfiles-pro: XDG Zsh startup' "$destination"; then
         printf 'skip: system Zsh XDG bootstrap already installed\n'

@@ -38,3 +38,6 @@ killfzf() {
     # Preserve your explicit force-kill helper; a cancelled/header selection does nothing.
     command kill -9 -- "$selected_pid"
 }
+
+# List the live alias table, including aliases added by personal overrides.
+aliases() { builtin alias; }

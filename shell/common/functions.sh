@@ -17,3 +17,6 @@ gcofzf() {
   branch=$(git branch --format='%(refname:short)' | fzf --border=rounded --prompt='Branch > ') || return 0
   [ -n "$branch" ] && git switch -- "$branch"
 }
+
+# List the live alias table, including aliases added by personal overrides.
+aliases() { builtin alias; }
