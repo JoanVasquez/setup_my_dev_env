@@ -541,7 +541,7 @@ There is no separate `dotfiles/nvim.lua` override hook in this imported entrypoi
 - Prefix + `R`: reload `~/.tmux.conf`.
 - Prefix + `r`: popup fuzzy session picker; built-in tree fallback when fzf is missing.
 - Splits/windows open in the active pane's directory.
-- Vim-style pane navigation, mouse support, vi copy mode, true-color handling, and Tokyonight Moon styling are retained.
+- Vim-style pane navigation, mouse support, vi copy mode, true-color handling, and Catppuccin Mocha styling are retained.
 - Desktop clipboard commands use available X11/Wayland utilities, alongside the configured terminal clipboard behavior.
 - Resurrect capture and 15-minute continuum save/restore settings are retained.
 
@@ -555,9 +555,9 @@ tmux-plugins/tmux-continuum
 
 Missing checkouts are cloned into `~/.tmux/plugins`; valid existing checkouts are preserved. Prefix + `I` remains available for TPM maintenance. Setup does not replace/start your running tmux server; open/reload it to activate the configuration.
 
-The popup/reload commands retain their standard home paths. In particular, the popup uses `~/.config/tmux/session-picker.sh`, so a custom `XDG_CONFIG_HOME` needs an appropriate adjustment to that binding.
+The popup and theme helpers honor `$XDG_CONFIG_HOME` (default `~/.config`), including paths with spaces. Reload still uses the managed `~/.tmux.conf` startup link.
 
-See [config/tmux/README.md](config/tmux/README.md).
+The status bar follows your Mocha reference: centered icon-numbered windows, mode/session/directory indicators, session dots, uptime, clock/date, and pane labels. It uses native tmux settings and local scripts; FZF, Resurrect, Continuum and existing shortcuts remain enabled. See [config/tmux/README.md](config/tmux/README.md).
 
 ## Starship and terminals
 
@@ -567,14 +567,14 @@ The global configuration links to `$XDG_CONFIG_HOME/starship.toml`; Zsh also rec
 
 | Terminal | Managed configuration |
 | --- | --- |
-| Kitty | Directory with font, color, cursor, padding, and close-confirmation settings |
+| Kitty | Catppuccin Mocha, Maple Mono NF, cursor trails, margins, transparency, selection/copy and font-size shortcuts |
 | Alacritty | TOML font, padding, opacity, and color configuration |
 | Ghostty | Font, padding, transparency, and Tokyonight Moon colors |
 | Konsole | `Moon.colorscheme` only, under the XDG data directory |
 
 Terminal selection installs/configures the chosen terminal; it does not change desktop default-terminal associations. Konsole needs you to select Moon in its profile settings. Its whole preferences directory is not replaced.
 
-A font containing the prompt/editor icon glyphs is needed for those icons; choose an installed Nerd Font in your terminal settings. Font installation is not performed by this script.
+Kitty uses your Maple Mono NF 12 pt profile and includes its local Mocha theme. Install that font separately and restart Kitty to apply the complete profile; see [config/kitty/README.md](config/kitty/README.md). Other terminals also need an installed Nerd Font for icon glyphs. Font installation is not performed by this script.
 
 ## Development tools
 
@@ -840,7 +840,7 @@ shell/zsh/{zshenv,zshrc}         User/legacy Zsh startup bridges
 config/zsh/                     Modular XDG Zsh profile
 config/fish/                    Imported Fish plugins/config + portable layer
 config/nvim/                    Full Lua editor/plugin specifications + lockfile
-config/tmux/                    Imported tmux configuration and picker
+config/tmux/                    Mocha tmux styling, session picker and status helpers
 config/starship/                Shared prompt
 config/{kitty,alacritty,ghostty}/ Terminal templates
 config/konsole/                 Moon color scheme

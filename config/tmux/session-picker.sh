@@ -18,16 +18,16 @@ if ! session=$(
         --pointer='❯' \
         --header='ENTER: Switch | ESC: Cancel' \
         --color='
-            bg:#222436,
-            fg:#c8d3f5,
-            hl:#86e1fc,
-            fg+:#c8d3f5,
-            bg+:#3b4261,
-            hl+:#c099ff,
-            pointer:#ff757f,
-            prompt:#82aaff,
-            border:#444a73,
-            header:#ffc777
+            bg:#1e1e2e,
+            fg:#cdd6f4,
+            hl:#fab387,
+            fg+:#cdd6f4,
+            bg+:#313244,
+            hl+:#cba6f7,
+            pointer:#f38ba8,
+            prompt:#89b4fa,
+            border:#585b70,
+            header:#f9e2af
         '
 ); then
     # Escape / Ctrl-C cancels without surfacing an error in the popup.
