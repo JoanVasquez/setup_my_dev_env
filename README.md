@@ -222,7 +222,7 @@ Without either selection, `install` and `unlink` use configs for supported progr
 | Zsh | Git, Neovim, Starship, zoxide, fzf, bat, fd, ripgrep, eza, lf, nvm/Node LTS, clipboard helpers, four Zsh plugins |
 | Fish | Git, Vim, Neovim, Starship, zoxide, fzf, bat, fd, ripgrep, eza, tree, native nvm/Node LTS, clipboard helpers |
 | Fish on CachyOS | Also CachyOS Fish defaults, fastfetch, and `col` |
-| Neovim | Git for the existing Lazy bootstrap |
+| Neovim | Git, nvm/Node LTS, Python with venv, Go, JDK, C compiler, make, Tree-sitter CLI, ripgrep, fd, clipboard helpers, curl, tar, unzip, gzip |
 | tmux | fzf and TPM; TPM brings Git, tmux-resurrect, and tmux-continuum |
 | Explicit TPM | tmux and Git, with tmux's requirements resolved too |
 | Zsh plugins | Git |
@@ -232,6 +232,8 @@ Without either selection, `install` and `unlink` use configs for supported progr
 Fish includes **Vim** because your imported `EDITOR`/`VISUAL` values are `vim`; it also includes **Neovim** for your configured editing helpers. Bash/Zsh use Neovim as their editor default.
 
 Aliases for Docker, AWS, Java-related project work, or tmux do not automatically make every optional application a shell requirement. The shell manifest covers active shell/editor/prompt/navigation modules. Neovim's language-specific servers, formatters, parser builds, and local AI setup have their separate lifecycle below.
+
+Shell selections that require Neovim also inherit its requirements, including the JDK.
 
 When a resolved requirement has a repository config (`nvim`, `tmux`, or `starship`), setup links it too. The package manager independently resolves system-library dependencies.
 
@@ -465,7 +467,7 @@ The project includes your full system Lua setup rather than a minimal starter:
 
 The imported setup documents **Neovim 0.11.3+**. The installer uses the distro Neovim package and does not automatically choose a newer binary if your repository version is older.
 
-Automatic dependency resolution supplies Git for Lazy. It does **not** execute every Neovim language-tool/parser/model installation. On a fresh machine, after meeting the requirements in [config/nvim/README.md](config/nvim/README.md), use:
+Automatic dependency resolution supplies the system runtimes, build tools, search tools, clipboard helpers, and download/archive utilities required by this configuration. It does **not** execute every Neovim language-tool/parser/model installation. On a fresh machine, after meeting the requirements in [config/nvim/README.md](config/nvim/README.md), use:
 
 ```vim
 :Lazy restore
@@ -473,7 +475,7 @@ Automatic dependency resolution supplies Git for Lazy. It does **not** execute e
 :TreesitterInstall
 ```
 
-Use `:checkhealth`, `:Mason`, `:ConformInfo`, and `:checkhealth vim.lsp` to inspect the setup. Node/npm, Python with venv support, Go, a C compiler, tree-sitter CLI, and an appropriate JDK are required by particular language/build workflows. They are not all installed merely because the Neovim package is selected.
+Use `:checkhealth`, `:Mason`, `:ConformInfo`, and `:checkhealth vim.lsp` to inspect the setup. Node/npm, Python with venv support, Go, a C compiler, tree-sitter CLI, and an appropriate JDK are required by particular language/build workflows. Selecting Neovim installs these requirements even when Neovim itself is already present. Arch uses its Tree-sitter CLI package; Debian/Ubuntu uses the upstream v0.26.11 binary in `~/.local/bin` (x86_64/aarch64).
 
 The configuration covers Python, JavaScript/TypeScript/React, web files, Django templates, Bash, Docker/Compose, SQL, Java, XML, JSON, and YAML. It recognizes active Python environments or project `.venv`/`venv`; `:PythonInterpreter /path/to/bin/python` changes the running session's interpreter. Project dependencies/configurations still supply type information, ESLint/Tailwind rules, SQL connections, and formatter settings.
 

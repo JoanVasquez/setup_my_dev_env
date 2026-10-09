@@ -6,7 +6,9 @@ Code opens without wrapping; `<leader>tw` toggles wrapping.
 
 Requires Neovim 0.11.3+, Git, Node.js/npm, Python 3 with venv support, Go (for sqls installation),
 a C compiler and tree-sitter CLI for parser installation, and a recent JDK
-for JDTLS. Use `:checkhealth` to diagnose missing dependencies.
+for JDTLS. Selecting `nvim` in the dotfiles setup/packages installer installs these
+requirements plus make, ripgrep, fd, clipboard helpers, and download/archive utilities.
+Use `:checkhealth` to diagnose missing dependencies.
 
 Plugins are managed by Lazy and tools by Mason. On another machine, open
 Neovim and run `:Lazy install`, `:MasonToolsInstall`, and `:TreesitterInstall`.

@@ -26,3 +26,13 @@ tree tree tree
 fastfetch fastfetch fastfetch
 col bsdextrautils util-linux
 cachyos-fish-config - cachyos-fish-config
+# Neovim runtime/build requirements (resolved automatically).
+python python3,python3-venv python
+go golang-go go
+c-compiler gcc gcc
+make make make
+tree-sitter tree-sitter-cli tree-sitter-cli
+curl curl curl
+tar tar tar
+unzip unzip unzip
+gzip gzip gzip

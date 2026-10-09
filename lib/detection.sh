@@ -67,6 +67,9 @@ tool_installed() {
         codex) codex_present ;;
         docker) docker_present && compose_present ;;
         tpm) tmux_plugins_ready ;;
+        python) command_exists python3 && python3 -c 'import venv, ensurepip' >/dev/null 2>&1 ;;
+        c-compiler) command_exists cc || command_exists gcc || command_exists clang ;;
+        tree-sitter) command_exists tree-sitter ;;
         java) command_exists javac ;;
         ripgrep) command_exists rg ;;
         fd) command_exists fd || command_exists fdfind ;;

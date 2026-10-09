@@ -50,6 +50,9 @@ build_packages() {
                     if ! compose_present; then add_package docker-compose; fi
                 elif ! docker_present; then add_download_requirements
                 fi ;;
+            tree-sitter)
+                if [[ "$family" == arch ]]; then add_package tree-sitter-cli
+                else add_download_requirements; add_command_package gzip gzip; fi ;;
             aws) add_download_requirements; add_package unzip,gnupg,groff,less ;;
             nvm) add_download_requirements; add_command_package tar tar ;;
             codex|tpm|zsh-plugins|none) : ;;
@@ -88,6 +91,7 @@ install_vendors() {
     local component
     for component in "${missing_components[@]}"; do
         case "$component" in
+            tree-sitter) install_tree_sitter ;;
             starship) install_starship ;;
             docker) install_docker ;;
             nvm) install_nvm ;;

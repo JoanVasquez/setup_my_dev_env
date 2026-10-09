@@ -111,6 +111,8 @@ Ctrl-Left/Right move by word. Up/Down use substring history when its plugin is
 available and regular history otherwise. Ctrl-Backslash toggles autosuggestions
 when that widget is installed. fzf's usual Ctrl-T/Alt-C/Ctrl-R keys are restored
 after vi-mode initialization resets the keymap.
+Escape cancels history/file pickers and keeps the prompt in insert mode so you
+can continue typing immediately.
 
 ## Plugin lifecycle
 

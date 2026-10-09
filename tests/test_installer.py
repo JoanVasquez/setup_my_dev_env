@@ -30,6 +30,7 @@ class InstallerTests(unittest.TestCase):
         self.env = dict(os.environ, HOME=str(self.home), SHELL="/bin/bash",
                         OS_RELEASE_FILE=str(self.release),
                         XDG_CONFIG_HOME=str(self.home / ".config"),
+                        XDG_CACHE_HOME=str(self.home / ".cache"),
                         XDG_DATA_HOME=str(self.home / ".local/share"),
                         XDG_STATE_HOME=str(self.home / ".local/state"),
                         PATH=str(self.mock), TEST_LOG=str(self.log),
@@ -39,7 +40,7 @@ class InstallerTests(unittest.TestCase):
         # A restricted PATH prevents the host's tools from masquerading as fixtures.
         for utility in ("bash", "sh", "env", "dirname", "date", "mkdir", "mv", "ln", "readlink",
                         "rm", "cat", "mktemp", "cut", "id", "awk", "grep", "tar", "uname",
-                        "chmod", "sort", "sed", "head", "find", "ps", "tr", "cp", "install", "fish", "zsh"):
+                        "chmod", "sort", "sed", "head", "find", "ps", "tr", "cp", "install", "gzip", "fish", "zsh"):
             executable = shutil.which(utility)
             if executable:
                 (self.mock / utility).symlink_to(executable)
@@ -100,6 +101,12 @@ case "$*" in
                     if [[ -L "$TEST_BIN/$package" ]]; then rm "$TEST_BIN/$package"; fi
                     printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$package"
                     chmod +x "$TEST_BIN/$package" ;;
+                python3|python) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/python3"; chmod +x "$TEST_BIN/python3" ;;
+                gcc|make|golang-go|go|tree-sitter-cli)
+                    binary="$package"
+                    [[ "$package" != golang-go ]] || binary=go
+                    [[ "$package" != tree-sitter-cli ]] || binary=tree-sitter
+                    printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$binary"; chmod +x "$TEST_BIN/$binary" ;;
                 neovim) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/nvim"; chmod +x "$TEST_BIN/nvim" ;;
                 zoxide|fzf|bat|fd|rg|eza|lf|vim|tree|xclip|wl-copy|fastfetch|col|tmux|starship) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$package"; chmod +x "$TEST_BIN/$package" ;;
                 util-linux|bsdextrautils) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/col"; chmod +x "$TEST_BIN/col" ;;
@@ -130,6 +137,8 @@ while (($#)); do
     shift
 done
 case "$url" in
+    */tree-sitter-linux-*.gz)
+        printf '#!/usr/bin/env bash\nexit 0\n' | gzip > "$output" ;;
     */nvm/*/install.sh)
         cat > "$output" <<'INSTALL'
 mkdir -p "$NVM_DIR"
@@ -170,7 +179,8 @@ esac
     def seed_shell_dependencies(self, shell):
         # Pre-existing runtime tools let activation/skip tests avoid unrelated installs.
         for name in ("git", "nvim", "starship", "zoxide", "fzf", "bat", "fd", "rg",
-                     "eza", "lf", "xclip", "wl-copy", "vim", "tree"):
+                     "eza", "lf", "xclip", "wl-copy", "vim", "tree", "python3", "go",
+                     "javac", "cc", "make", "tree-sitter", "curl", "unzip"):
             self.mock_command(name, "exit 0")
         if shell == "fish":
             directory = self.home / ".local/share/nvm"
@@ -196,7 +206,7 @@ esac
         line = next(line for line in output.splitlines() if line.startswith("Automatic requirements:"))
         for tool in ("git", "nvim", "starship", "zoxide", "fzf", "bat", "fd", "ripgrep", "eza", "lf", "nvm", "clipboard", "zsh-plugins"):
             self.assertIn(tool, line.split())
-        self.assertNotIn("java", line.split())
+        self.assertIn("java", line.split())
         self.assertNotIn("docker", line.split())
         self.assertFalse(self.log.exists())
 
@@ -211,6 +221,35 @@ esac
             self.assertEqual("cachyos-fish-config" in line.split(), distro == "cachyos")
             self.assertEqual("fastfetch" in line.split(), distro == "cachyos")
         self.assertFalse(self.log.exists())
+
+    def test_neovim_installs_missing_requirements_on_both_families(self):
+        self.fake_system()
+        self.mock_command("nvim", "exit 0")
+        for distro, packages in (
+            ("ubuntu", ("python3", "python3-venv", "golang-go", "default-jdk", "gcc", "make", "ripgrep", "fd-find", "xclip", "wl-clipboard", "unzip")),
+            ("arch", ("python", "go", "jdk-openjdk", "gcc", "make", "tree-sitter-cli", "ripgrep", "fd", "xclip", "wl-clipboard", "unzip")),
+        ):
+            self.release.write_text(f"ID={distro}\n")
+            output = self.cli("packages", "--tools", "nvim", "--dry-run")
+            self.assertIn("skip: nvim already installed", output)
+            requirements = next(line for line in output.splitlines() if line.startswith("Automatic requirements:"))
+            for tool in ("git", "nvm", "python", "go", "java", "c-compiler", "make", "tree-sitter", "ripgrep", "fd", "clipboard"):
+                self.assertIn(tool, requirements.split())
+            planned = next(line for line in output.splitlines() if line.startswith("Distro packages:"))
+            for package in packages:
+                self.assertIn(package, planned.split())
+            self.assertNotIn("neovim", planned.split())
+        self.assertFalse(self.log.exists())
+
+    def test_neovim_dependency_install_is_repeatable(self):
+        self.fake_system()
+        self.cli("packages", "--tools", "nvim", "--yes")
+        self.assertTrue((self.home / ".local/bin/tree-sitter").is_file())
+        first_log = self.log.read_text()
+        self.assertIn("nvm install --lts", first_log)
+        output = self.cli("packages", "--tools", "nvim", "--yes")
+        self.assertIn("No missing distro packages to install", output)
+        self.assertEqual(self.log.read_text(), first_log)
 
     def test_java_alone_only_installs_jdk(self):
         self.fake_system()
@@ -248,15 +287,15 @@ esac
                 env=self.env, stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             os.close(slave)
             slave = None
-            # Optional tmux, Docker, Java, Codex, AWS, lf, fastfetch; then the plan.
-            os.write(master, b"n\nn\ny\nn\nn\nn\nn\ny\n")
+            # Optional tmux, Docker, Codex, AWS, lf, fastfetch; then the plan.
+            os.write(master, b"n\nn\ny\nn\nn\nn\ny\n")
             stdout, stderr = process.communicate(timeout=10)
             self.assertEqual(process.returncode, 0, stdout + stderr)
-            self.assertIn("Optional tools: java", stdout)
+            self.assertIn("Optional tools: codex", stdout)
             for label in ("Neovim", "nvm + Node.js LTS", "starship", "zoxide", "fzf", "bat", "clipboard"):
                 self.assertNotIn("Install/configure " + label, stderr)
             self.assertNotIn("Zsh autosuggestions", stderr)
-            self.assertIn("Install/configure Java JDK", stderr)
+            self.assertNotIn("Install/configure Java JDK", stderr)
         finally:
             os.close(master)
             if slave is not None:
@@ -419,6 +458,7 @@ esac
 
     def test_installed_tools_skip_all_installation_commands(self):
         self.fake_system()
+        self.seed_shell_dependencies("bash")
         for name in ("tmux", "nvim", "docker", "javac", "starship", "codex", "aws", "fzf"):
             self.mock_command(name, 'exit 0')
         for name, entry in (("tpm", "tpm"), ("tmux-resurrect", "scripts/save.sh"), ("tmux-continuum", "continuum.tmux")):
@@ -511,9 +551,9 @@ esac
                 env=self.env, stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             os.close(slave)
             slave = None
-            # git, nvim, tmux, starship, zoxide, nvm, docker, java, codex,
-            # fzf, bat, ripgrep, fd, clipboard, tpm, aws.
-            answers = ["y", "y", "n", "n", "n", "y"] + ["n"] * 12 + ["y"]
+            # nvim, tmux, Docker, Codex, AWS, then remaining optional tools.
+            # Java, Node and search/clipboard tools are now implied by Neovim.
+            answers = ["y", "y", "n", "n", "y"] + ["n"] * 8 + ["y"]
             os.write(master, ("\n".join(answers) + "\n").encode())
             stdout, stderr = process.communicate(timeout=10)
             self.assertEqual(process.returncode, 0, stdout + stderr)
@@ -647,6 +687,35 @@ esac""")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("yes", result.stdout)
         self.assertIn("_fzf_file_no_hidden", result.stdout)
+
+    def test_zsh_restores_fzf_keys_after_vi_mode_resets_them(self):
+        self.cli("install", "--components", "zsh", "--yes")
+        self.mock_command("fzf", r'''
+[[ "${1:-}" == --zsh ]] || exit 1
+cat <<'INIT'
+(( $+widgets[fzf-history-widget] )) && return
+fzf-history-widget() { :; }
+fzf-file-widget() { :; }
+fzf-cd-widget() { :; }
+zle -N fzf-history-widget
+zle -N fzf-file-widget
+zle -N fzf-cd-widget
+INIT
+''')
+        result = self.zsh(r'''
+bindkey -v
+bindkey -M viins '^R' history-incremental-search-backward
+zvm_after_init
+bindkey -M viins '^R'
+bindkey -M viins '^T'
+bindkey -M viins '\ec'
+bindkey -M viins '^['
+''')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('"^R" fzf-history-widget', result.stdout)
+        self.assertIn('"^T" fzf-file-widget', result.stdout)
+        self.assertIn('fzf-cd-widget', result.stdout)
+        self.assertIn('"^[" _dotfiles_escape', result.stdout)
 
     def test_fzf_option_restore_leaves_readonly_zle_untouched(self):
         self.cli("install", "--components", "zsh", "--yes")

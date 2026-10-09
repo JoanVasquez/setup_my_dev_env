@@ -3,7 +3,7 @@
 bash git nvim starship zoxide fzf bat fd ripgrep nvm
 fish git vim nvim starship zoxide fzf bat fd ripgrep eza tree nvm clipboard
 zsh git nvim starship zoxide fzf bat fd ripgrep eza lf nvm clipboard zsh-plugins
-nvim git
+nvim git nvm python go java c-compiler make tree-sitter ripgrep fd clipboard curl tar unzip gzip
 tmux fzf tpm
 tpm tmux git
 zsh-plugins git
