@@ -1,0 +1,8 @@
+[Unit]
+Description=OpenSSH Agent
+Requires=ssh-agent.socket
+After=ssh-agent.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh-agent -D

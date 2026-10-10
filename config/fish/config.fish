@@ -34,18 +34,18 @@ alias grep="grep --color=auto"
 
 alias home="cd ~"
 
-# Inspection includes interactive aliases without starting shell integrations.
-if status is-interactive; or set -q DOTFILES_ALIAS_LISTING
-    if type -q zoxide
-        alias cd="z"
-    end
-end
+# Keep native cd semantics; zoxide provides `z` after interactive initialization.
 
 alias cfish='nvim "$XDG_CONFIG_HOME/fish/config.fish"'
 
 alias cnvim='nvim "$XDG_CONFIG_HOME/nvim"'
+alias czsh='nvim "$XDG_CONFIG_HOME/zsh/.zshrc"'
+alias n='nvim'
+alias dotfiles='"$DOTFILES_HOME/bin/dotfiles"'
 
-if command -q xclip
+if test -n "$WAYLAND_DISPLAY"; and command -q wl-copy
+    alias xcopy="wl-copy"
+else if command -q xclip
     alias xcopy="xclip -selection clipboard"
 else if command -q wl-copy
     alias xcopy="wl-copy"
@@ -57,11 +57,16 @@ alias sstop="sudo systemctl stop"
 
 # Fuzzy kill process
 function killfzf
-    set pid (ps -eo pid,comm,args | fzf --prompt='Kill process > ' | awk '{print $1}')
-
-    if test -n "$pid"
-        kill -9 $pid
+    command -q fzf; or begin
+        echo 'fzf is not installed' >&2
+        return 1
     end
+    set -l selection (command ps -eo pid,comm,args | command fzf --prompt='Kill process > ')
+    set -l picker_status $status
+    test $picker_status -eq 0; or return 0
+    set -l selected_pid (string trim -- "$selection" | string split -n ' ')[1]
+    string match -qr '^[0-9]+$' -- "$selected_pid"; or return 0
+    command kill -9 -- "$selected_pid"
 end
 
 #=====================
@@ -83,22 +88,26 @@ alias gsw="git switch"
 
 # Fuzzy branch checkout
 function gcofzf
+    command -q fzf; or begin
+        echo 'fzf is not installed' >&2
+        return 1
+    end
     if not git rev-parse --is-inside-work-tree >/dev/null 2>&1
         echo "󰊢 Not inside a Git repository."
         return 1
     end
 
-    set branches (
+    set -l branches (
         git for-each-ref \
             --format='%(refname:short)' \
             refs/heads/ refs/remotes/ |
         string replace -r '^origin/' '' |
-        string match -v 'HEAD' |
+        string match -rv '(^|/)HEAD$' |
         sort -u
     )
 
     if test (count $branches) -eq 0
-        set current_branch (git branch --show-current)
+        set -l current_branch (git branch --show-current)
 
         if test -n "$current_branch"
             echo "󰊢 Current branch: $current_branch"
@@ -111,7 +120,7 @@ function gcofzf
         return 1
     end
 
-    set branch (
+    set -l branch (
         printf '%s\n' $branches |
         fzf \
             --prompt=' Branch > ' \
@@ -119,9 +128,11 @@ function gcofzf
             --height=60% \
             --border=rounded
     )
+    set -l picker_status $status
+    test $picker_status -eq 0; or return 0
 
     if test -n "$branch"
-        git switch $branch
+        command git switch -- "$branch"
     end
 end
 
@@ -162,11 +173,19 @@ alias dpl="docker pull"
 alias dmpl="docker model pull"
 
 function dbf
-    set -l filename (test -n "$argv[1]"; and echo $argv[1]; or echo "Dockerfile")
-    set -l tagname  (test -n "$argv[2]"; and echo $argv[2]; or echo "latest-app")
-    set -l targetdir (test -n "$argv[3]"; and echo $argv[3]; or echo ".")
-
-    docker build -f $filename -t $tagname $targetdir
+    set -l filename Dockerfile
+    set -l tagname latest-app
+    set -l targetdir .
+    if test -n "$argv[1]"
+        set filename "$argv[1]"
+    end
+    if test -n "$argv[2]"
+        set tagname "$argv[2]"
+    end
+    if test -n "$argv[3]"
+        set targetdir "$argv[3]"
+    end
+    command docker build -f "$filename" -t "$tagname" "$targetdir"
 end
 
 #=======================
@@ -235,11 +254,12 @@ alias trs="tmux rename-session -t"
 # Kill session
 alias tk="tmux kill-session -t"
 
+# run-shell parses its argument again; retain quotes for that second shell.
 # Restore last saved sessions
-alias trestore="tmux run-shell ~/.tmux/plugins/tmux-resurrect/scripts/restore.sh"
+alias trestore='tmux run-shell \'"$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh"\''
 
 # Save current sessions
-alias tsave="tmux run-shell ~/.tmux/plugins/tmux-resurrect/scripts/save.sh"
+alias tsave='tmux run-shell \'"$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh"\''
 # Utils config
 
 # ==============================

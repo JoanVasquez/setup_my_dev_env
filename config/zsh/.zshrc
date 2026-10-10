@@ -4,6 +4,11 @@
 DOTFILES_HOME="${${(%):-%x}:A:h:h:h}"
 source "$DOTFILES_HOME/lib/platform.sh"
 
+# Shared SSH agent for local terminal sessions; preserve forwarded remote agents.
+if [[ -z "${SSH_CONNECTION:-}" && -z "${SSH_TTY:-}" && -n "${XDG_RUNTIME_DIR:-}" ]]; then
+    export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+fi
+
 # History/cache belong in writable user directories, never the linked checkout.
 mkdir -p -- "$XDG_STATE_HOME/zsh" "$XDG_CACHE_HOME/zsh"
 HISTFILE="$XDG_STATE_HOME/zsh/history"

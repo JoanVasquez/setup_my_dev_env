@@ -18,12 +18,13 @@ elif (( $+commands[batcat] )); then
     alias bat='batcat' cat='batcat'
 fi
 if (( ! $+commands[fd] && $+commands[fdfind] )); then alias fd='fdfind'; fi
-if (( $+commands[rg] )); then alias grep='rg --color=auto'; else alias grep='grep --color=auto'; fi
+alias grep='grep --color=auto'
 alias diff='diff --color=auto' df='df -h' vim='nvim'
 # Keep cd's native semantics (including cd -); use z explicitly for ranked jumps.
 alias cfish='nvim "${XDG_CONFIG_HOME}/fish/config.fish"'
 alias czsh='nvim "$ZDOTDIR/.zshrc"' cnvim='nvim "${XDG_CONFIG_HOME}/nvim"'
-if (( $+commands[xclip] )); then alias xcopy='xclip -selection clipboard'
+if [[ -n "${WAYLAND_DISPLAY:-}" ]] && (( $+commands[wl-copy] )); then alias xcopy='wl-copy'
+elif (( $+commands[xclip] )); then alias xcopy='xclip -selection clipboard'
 elif (( $+commands[wl-copy] )); then alias xcopy='wl-copy'; fi
 alias sen='sudo systemctl enable --now' sstatus='sudo systemctl status' sstop='sudo systemctl stop'
 
@@ -56,5 +57,6 @@ alias n='nvim'
 # tmux() in functions.zsh implements your attach/create behavior.
 alias t='tmux' ta='tmux attach' tan='tmux attach -t' tls='tmux ls' tn='tmux new -s'
 alias rs='tmux rename-session' trs='tmux rename-session -t' tk='tmux kill-session -t'
-alias trestore='tmux run-shell "$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh"'
-alias tsave='tmux run-shell "$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh"'
+# run-shell parses its argument again; retain quotes for that second shell.
+alias trestore='tmux run-shell '\''"$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh"'\'''
+alias tsave='tmux run-shell '\''"$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh"'\'''

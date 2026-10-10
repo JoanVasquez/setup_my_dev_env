@@ -207,10 +207,52 @@ Normal setup already makes a selected shell default. It checks the account datab
 Components are:
 
 ```text
-bash,zsh,fish,tmux,nvim,starship,kitty,alacritty,konsole,ghostty
+bash,zsh,fish,tmux,nvim,starship,kitty,alacritty,konsole,ghostty,ssh-agent
 ```
 
 Without either selection, `install` and `unlink` use configs for supported programs found on PATH, plus the detected login shell. This can include several shells/terminals. An explicit `--components` list takes precedence over `--all` if both are supplied. No dependency installation occurs through these commands.
+
+### Shared SSH agent
+
+Fish and Zsh use `$XDG_RUNTIME_DIR/ssh-agent.socket` in local sessions when a runtime
+directory is available. SSH sessions retain their forwarded agent. Install the
+socket and matching service with:
+
+```sh
+./bin/dotfiles install --components ssh-agent --yes
+systemctl --user daemon-reload
+systemctl --user enable --now ssh-agent.socket
+```
+
+The units link individually into `$XDG_CONFIG_HOME/systemd/user` (by default
+`~/.config/systemd/user`), preserving unrelated services. Reinstall your Fish or
+Zsh component to load the shell configuration if it is not already linked.
+The installer links configuration; the commands above activate it.
+
+Requires a systemd user session and OpenSSH 10.0 or newer, or a distribution build
+with socket activation backported. See the [OpenSSH 10.0 release notes](https://www.openssh.org/txt/release-10.0).
+The service runs `ssh-agent -D` without `-a` so it inherits systemd's listening
+socket. It starts on the first connection, so it can be inactive until `ssh-add`
+or SSH uses the socket.
+
+```sh
+systemctl --user status ssh-agent.socket ssh-agent.service
+ssh-add ~/.ssh/id_ed25519
+```
+
+To disable activation and stop an already running agent:
+
+```sh
+systemctl --user disable --now ssh-agent.socket
+systemctl --user stop ssh-agent.service
+```
+
+Before removing the managed units, stop them as above, then run:
+
+```sh
+./bin/dotfiles unlink --components ssh-agent --yes
+systemctl --user daemon-reload
+```
 
 ### Packages-only option
 

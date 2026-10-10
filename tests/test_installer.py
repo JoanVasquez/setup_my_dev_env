@@ -434,7 +434,7 @@ esac
                 for line in install_aliases:
                     self.assertIn(expected, line)
                 self.assertIn("docker compose up -d", output)
-                self.assertIn("alias cd z", output)
+                self.assertNotIn("alias cd z", output)
                 self.assertNotIn("should not execute", output)
                 self.assertFalse(self.log.exists())
                 self.assertEqual(list(self.home.iterdir()), [])
@@ -986,6 +986,129 @@ esac
         self.assertIn("batcat -l man -p", result.stdout)
         self.assertIn("batcat $argv", result.stdout)
         self.assertIn("fdfind $argv", result.stdout)
+
+    def configured_shell(self, shell, commands):
+        if shell == "fish":
+            script = f'source "{ROOT}/config/fish/conf.d/dotfiles-environment.fish"\nsource "{ROOT}/config/fish/config.fish"\n' + commands
+            args = [shutil.which(shell), "--no-config", "-c", script]
+        else:
+            script = f'DOTFILES_HOME="{ROOT}"\nsource "$DOTFILES_HOME/lib/platform.sh"\ncompdef() {{ :; }}\nsource "$DOTFILES_HOME/config/zsh/aliases.zsh"\nsource "$DOTFILES_HOME/config/zsh/functions.zsh"\neval "$1"'
+            args = [shutil.which(shell), "-dfc", script, "test-shell", commands]
+        return subprocess.run(args, env=self.env, text=True, capture_output=True)
+
+    def test_shell_helpers_preserve_docker_arguments_and_tmux_shell_quoting(self):
+        self.mock_command("docker", 'printf "%s\\n" "$@" >> "$TEST_LOG"')
+        self.mock_command("tmux", '[[ "$1" == run-shell ]] && exec sh -c "$2"')
+        scripts = self.home / ".tmux/plugins/tmux-resurrect/scripts"
+        scripts.mkdir(parents=True)
+        for name in ("save", "restore"):
+            target = scripts / f"{name}.sh"
+            target.write_text(f'#!/bin/sh\nprintf "{name}\\n" >> "$TEST_LOG"\n')
+            target.chmod(0o755)
+        for shell in ("fish", "zsh"):
+            with self.subTest(shell=shell):
+                self.log.unlink(missing_ok=True)
+                result = self.configured_shell(shell, 'dbf "Dockerfile dev" "image:dev" "context\nsecond line"\ndbf\ntsave\ntrestore')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(self.log.read_text().splitlines(),
+                                 ["build", "-f", "Dockerfile dev", "-t", "image:dev", "context", "second line",
+                                  "build", "-f", "Dockerfile", "-t", "latest-app", ".", "save", "restore"])
+
+    def test_shell_clipboard_prefers_wayland_and_grep_keeps_grep_options(self):
+        self.env["WAYLAND_DISPLAY"] = "wayland-0"
+        self.mock_command("xclip", 'printf "xclip\\n" >> "$TEST_LOG"')
+        self.mock_command("wl-copy", 'printf "wayland\\n" >> "$TEST_LOG"')
+        self.mock_command("rg", 'exit 42')
+        for shell in ("fish", "zsh"):
+            with self.subTest(shell=shell):
+                self.log.unlink(missing_ok=True)
+                result = self.configured_shell(shell, "xcopy\nprintf 'a\\nb\\n' | grep -G '^a$'")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, "a\n")
+                self.assertEqual(self.log.read_text(), "wayland\n")
+
+    def test_fish_native_cd_works_when_zoxide_exists_without_initialization(self):
+        self.mock_command("zoxide", 'exit 0')
+        self.env["DOTFILES_ALIAS_LISTING"] = "1"
+        result = self.configured_shell("fish", 'cd /\ncd "$HOME"\ncd - >/dev/null\npwd')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "/\n")
+
+    def test_zsh_croot_failure_keeps_current_directory(self):
+        self.mock_command("git", 'exit 1')
+        result = self.configured_shell("zsh", 'before=$PWD; croot; result=$?; [[ $result != 0 && $PWD == $before ]]')
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_ssh_agent_units_link_repeatably_and_preserve_unrelated_services(self):
+        directory = self.home / ".config/systemd/user"
+        directory.mkdir(parents=True)
+        unrelated = directory / "personal.service"
+        unrelated.write_text("personal service\n")
+        previous = directory / "ssh-agent.socket"
+        previous.write_text("previous socket\n")
+        output = self.cli("install", "--components", "ssh-agent", "--dry-run")
+        self.assertIn("ssh-agent.service", output)
+        self.assertEqual(previous.read_text(), "previous socket\n")
+        self.cli("install", "--components", "ssh-agent", "--yes")
+        for name in ("ssh-agent.socket", "ssh-agent.service"):
+            self.assertEqual((directory / name).resolve(), ROOT / "config/systemd/user" / name)
+        archives = list((self.home / ".local/state/dotfiles/backups").rglob("ssh-agent.socket"))
+        self.assertEqual(len(archives), 1)
+        self.assertEqual(archives[0].read_text(), "previous socket\n")
+        self.cli("install", "--components", "ssh-agent", "--yes")
+        self.cli("unlink", "--components", "ssh-agent", "--yes")
+        self.assertFalse(previous.exists())
+        self.assertFalse((directory / "ssh-agent.service").exists())
+        self.assertEqual(unrelated.read_text(), "personal service\n")
+
+    def test_shared_ssh_agent_preserves_forwarding_and_requires_runtime_directory(self):
+        self.cli("install", "--components", "fish,zsh", "--yes")
+        for shell in ("fish", "zsh"):
+            for connection, tty, runtime, expected in (
+                ("", "", "/run/user/1234", "/run/user/1234/ssh-agent.socket"),
+                ("remote", "", "/run/user/1234", "/forwarded/agent"),
+                ("", "/dev/pts/1", "/run/user/1234", "/forwarded/agent"),
+                ("", "", "", "/forwarded/agent"),
+            ):
+                with self.subTest(shell=shell, connection=connection, tty=tty, runtime=runtime):
+                    env = dict(self.env, SSH_CONNECTION=connection, SSH_TTY=tty,
+                               XDG_RUNTIME_DIR=runtime, SSH_AUTH_SOCK="/forwarded/agent")
+                    result = subprocess.run([shutil.which(shell), "-ic", 'printf "%s" "$SSH_AUTH_SOCK"'],
+                                            env=env, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout, expected)
+
+    def test_fish_git_picker_filters_head_and_preserves_cancellation(self):
+        self.env["BRANCH_INPUT"] = str(self.base / "branches")
+        self.mock_command("git", r'''case "$1" in
+    rev-parse) exit 0 ;;
+    for-each-ref) printf 'main\norigin/main\norigin/feature\norigin/HEAD\nupstream/HEAD\n' ;;
+    switch) printf '%s\n' "$@" > "$TEST_LOG" ;;
+esac''')
+        self.mock_command("fzf", 'cat > "$BRANCH_INPUT"; printf "feature\\n"')
+        result = self.configured_shell("fish", 'gcofzf')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(Path(self.env["BRANCH_INPUT"]).read_text().splitlines(), ["feature", "main"])
+        self.assertEqual(self.log.read_text().splitlines(), ["switch", "--", "feature"])
+        self.log.unlink()
+        self.mock_command("fzf", 'cat >/dev/null; printf "feature\\n"; exit 130')
+        result = self.configured_shell("fish", 'gcofzf')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_process_picker_ignores_headers_and_cancelled_selections(self):
+        self.mock_command("kill", 'printf "%s\\n" "$@" >> "$TEST_LOG"')
+        for shell in ("fish", "zsh"):
+            for selection, exit_status in (("PID COMMAND", 0), ("123 process", 130), ("123 process", 0)):
+                with self.subTest(shell=shell, selection=selection, status=exit_status):
+                    self.log.unlink(missing_ok=True)
+                    self.mock_command("fzf", f'cat >/dev/null; printf "{selection}\\n"; exit {exit_status}')
+                    result = self.configured_shell(shell, 'killfzf')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    if selection.startswith("123") and exit_status == 0:
+                        self.assertEqual(self.log.read_text().splitlines(), ["-9", "--", "123"])
+                    else:
+                        self.assertFalse(self.log.exists())
 
     def test_zsh_ancestry_detection_works_in_both_shells(self):
         self.release.write_text('ID=custom\nID_LIKE="custom debian"\n')

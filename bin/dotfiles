@@ -30,7 +30,7 @@ setup     Choose shell, terminal, tools; install packages and link configs.
   --docker-group    Join the Docker group (root-level access).
 
 install / unlink
-  --components bash,zsh,fish,tmux,nvim,starship,kitty,alacritty,konsole,ghostty
+  --components bash,zsh,fish,tmux,nvim,starship,kitty,alacritty,konsole,ghostty,ssh-agent
   --all             Select every configuration.
   Default: configs for installed programs and the login shell.
 
@@ -63,7 +63,7 @@ shell_choice=auto terminal_choice=auto shell_explicit=0 terminal_explicit=0 tool
 # The tools string below is the unattended default; the wizard builds its own selection.
 tools_available=(git nvim tmux starship zoxide nvm docker java codex fzf bat ripgrep fd clipboard tpm aws eza lf zsh-plugins vim tree fastfetch)
 tools=git,nvim,tmux,starship,zoxide,nvm,docker,java,codex,fzf,bat,ripgrep,fd,tpm,aws
-components=(bash zsh fish tmux nvim starship kitty alacritty konsole ghostty)
+components=(bash zsh fish tmux nvim starship kitty alacritty konsole ghostty ssh-agent)
 # Parse arguments in order. The first case checks command-specific flag validity;
 # the second stores values. shift removes an argument from the remaining input.
 while (($#)); do

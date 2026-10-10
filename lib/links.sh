@@ -3,6 +3,8 @@
 # Argument: config component. Return the template inside the permanent checkout.
 # Some components own a whole directory; Starship/Konsole own a single file.
 source_path() { case "$1" in
+    ssh-agent) echo "$ROOT/config/systemd/user/ssh-agent.socket" ;;
+    ssh-agent-service) echo "$ROOT/config/systemd/user/ssh-agent.service" ;;
     fish-file:*) echo "$ROOT/config/fish/${1#fish-file:}" ;;
     bash) echo "$ROOT/shell/bash/bashrc" ;;
     zsh) echo "$ROOT/config/zsh/.zshrc" ;;
@@ -25,6 +27,8 @@ source_path() { case "$1" in
 # Map each component to the location its application reads.
 # ${XDG_CONFIG_HOME:-$HOME/.config} uses the XDG override when set, otherwise the default.
 target_path() { case "$1" in
+    ssh-agent) echo "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/ssh-agent.socket" ;;
+    ssh-agent-service) echo "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/ssh-agent.service" ;;
     fish-file:*) echo "${XDG_CONFIG_HOME:-$HOME/.config}/fish/${1#fish-file:}" ;;
     bash) echo "$HOME/.bashrc" ;;
     zsh) echo "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/.zshrc" ;;
@@ -54,6 +58,7 @@ wanted() {
     fi
     if ((all)); then return 0; fi
     case "$name" in
+    ssh-agent) return 1 ;; # Explicit selection or --all; requires socket-aware OpenSSH.
     bash | zsh | fish) [[ "$(detect_shell)" == "$name" ]] || command -v "$name" >/dev/null ;;
     *) command -v "$name" >/dev/null 2>&1 ;;
     esac
@@ -115,6 +120,7 @@ install_one() {
     local support
     if [[ "$1" == fish ]]; then install_fish_config; return; fi
     install_link "$1"
+    if [[ "$1" == ssh-agent ]]; then install_link ssh-agent-service; fi
     if [[ "$1" == zsh ]]; then
         for support in "${zsh_support_links[@]}"; do install_link "$support"; done
         if ((!dry)); then mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/zsh" "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"; fi
@@ -125,6 +131,7 @@ unlink_one() {
     local support
     if [[ "$1" == fish ]]; then unlink_fish_config; return; fi
     unlink_link "$1"
+    if [[ "$1" == ssh-agent ]]; then unlink_link ssh-agent-service; fi
     if [[ "$1" == zsh ]]; then
         for support in "${zsh_support_links[@]}"; do unlink_link "$support"; done
     fi

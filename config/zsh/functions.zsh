@@ -1,5 +1,10 @@
 # Functions need native Zsh syntax; they cannot source your Fish definitions directly.
-croot() { builtin cd "$(command git rev-parse --show-toplevel 2>/dev/null)" || return; }
+croot() {
+    local root
+    root="$(command git rev-parse --show-toplevel 2>/dev/null)" || return
+    [[ -n "$root" ]] || return 1
+    builtin cd -- "$root"
+}
 
 tmux() {
     if (( $# )); then command tmux "$@"; return; fi
@@ -32,8 +37,9 @@ gcofzf() {
 }
 killfzf() {
     (( $+commands[fzf] )) || { print -u2 'fzf is not installed'; return 1; }
-    local selected_pid
-    selected_pid="$(command ps -eo pid,comm,args | fzf --prompt='Kill process > ' | command awk '{print $1}')" || return 0
+    local selection selected_pid
+    selection="$(command ps -eo pid,comm,args | command fzf --prompt='Kill process > ')" || return 0
+    selected_pid="$(print -r -- "$selection" | command awk '{print $1}')"
     [[ "$selected_pid" == <-> ]] || return 0
     # Preserve your explicit force-kill helper; a cancelled/header selection does nothing.
     command kill -9 -- "$selected_pid"
