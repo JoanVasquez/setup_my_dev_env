@@ -79,7 +79,7 @@ files in the Zsh directory are preserved. Replaced files get normal backups.
   man pager, terminal-aware `GPG_TTY`, and the shared Starship config path.
 - `.zshrc`: history options, completion cache/styles, optional lf icons and
   zoxide integration, then module loading in order.
-- `node.zsh`: loads nvm-sh if installed; Fish keeps its separate native nvm.
+- `node.zsh`: loads nvm-sh if installed and exposes native Fish Node prefixes as well; Fish keeps its native manager.
 - `fzf.zsh`: file discovery with fd/fdfind/find, previews with bat/batcat/head,
   portable fzf initialization (including readonly ZLE option compatibility) and a Ctrl-F widget that quotes filenames.
 - `aliases.zsh`: eza listings, Git, Docker/Compose, npm, tmux, editor and distro
@@ -131,7 +131,7 @@ The `zsh-plugins` tool clones:
 ```
 
 Cloning occurs in the install phase, never at shell startup. Valid existing
-plugin entrypoints are skipped. An incomplete directory is reported for repair
+plugin entrypoints are skipped. An incomplete directory is backed up and repaired
 rather than overwritten. `ZPLUGINDIR` can override the plugin directory if you
 use the same setting for installation and shell startup.
 

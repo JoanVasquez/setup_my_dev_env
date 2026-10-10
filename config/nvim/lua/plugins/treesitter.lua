@@ -57,9 +57,16 @@ return {
 			}
 
 			-- Keep normal startup offline; install the configured set explicitly.
-			vim.api.nvim_create_user_command("TreesitterInstall", function()
-				treesitter.install(parsers, { summary = true, max_jobs = 4 })
-			end, { desc = "Install configured Treesitter parsers" })
+			vim.api.nvim_create_user_command("TreesitterInstall", function(args)
+				local installation = treesitter.install(parsers, { summary = true, max_jobs = 4 })
+				if args.bang then
+					installation:wait(300000)
+					local installed = treesitter.get_installed("parsers")
+					for _, parser in ipairs(parsers) do
+						assert(vim.tbl_contains(installed, parser), "Parser installation failed: " .. parser)
+					end
+				end
+			end, { bang = true, desc = "Install configured Treesitter parsers (! waits and verifies)" })
 
 			-- Enable Treesitter highlighting automatically
 			vim.api.nvim_create_autocmd("FileType", {

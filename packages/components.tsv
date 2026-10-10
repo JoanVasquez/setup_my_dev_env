@@ -13,7 +13,7 @@ zoxide zoxide zoxide zoxide
 bat bat bat bat
 ripgrep ripgrep ripgrep ripgrep
 fd fd-find fd fd-find
-java default-jdk jdk-openjdk java-21-openjdk-devel
+java openjdk-21-jdk jdk-openjdk java-21-openjdk-devel
 kitty kitty kitty kitty
 konsole konsole konsole konsole
 alacritty alacritty alacritty alacritty

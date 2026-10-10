@@ -64,7 +64,7 @@ install_compose_only() {
             candidate="${candidate#*:}"
             [[ "$candidate" =~ ^([0-9]+)\. && "${BASH_REMATCH[1]}" -ge 2 ]] || continue
         fi
-        privileged apt-get install -y --no-upgrade "$package"
+        privileged apt-get install -y --reinstall "$package"
         docker compose version
         return
     done
@@ -103,7 +103,7 @@ REPO
             privileged install -m 0644 "$work_dir/docker.sources" /etc/apt/sources.list.d/dotfiles-docker.sources
         fi
         privileged apt-get update
-        privileged apt-get install -y --no-upgrade docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        privileged apt-get install -y --reinstall docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     fi
     if ((!dry)); then docker compose version; fi
 }

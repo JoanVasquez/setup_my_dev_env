@@ -14,10 +14,13 @@ Setup supplies an upstream user Neovim runtime if the distro editor is older tha
 0.11.3 (Linux x86_64/aarch64). JDTLS needs JDK 21+; check the distro JDK version.
 Use `:checkhealth` to diagnose missing dependencies.
 
-Plugins are managed by Lazy and tools by Mason. On another machine, open
-Neovim and run `:Lazy install`, `:MasonToolsInstall`, and `:TreesitterInstall`.
-Tool and parser installation is explicit; opening files does not start downloads.
-Use `:Lazy restore` to restore the plugin versions in `lazy-lock.json`,
+Plugins are managed by Lazy and tools by Mason. Normal `dotfiles setup` installs
+missing plugins, tools and parsers after linking the config, then verifies them.
+For config-only installs, run `:Lazy install`, `:MasonToolsInstallSync`, and
+`:TreesitterInstall!` manually. Opening files does not install language tools.
+The committed lockfile seeds `stdpath("state")/lazy-lock.json`; plugin operations
+write the user copy, leaving the checkout unchanged. Use `:Lazy restore` to
+restore the plugin versions in that user lockfile,
 `:MasonToolsUpdate` to update tools, and `:TSUpdate` to update installed parsers.
 
 | Files | Completion and diagnostics | Formatting |

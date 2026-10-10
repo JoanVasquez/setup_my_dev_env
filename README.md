@@ -2,7 +2,7 @@
 
 A modular installer for your Linux shell, editor, terminal, prompt, and development tools. It detects Debian/Ubuntu, Arch-family, and Fedora-family distributions, lets you choose Bash, Fish, or Zsh, installs missing requirements, backs up existing configuration, and links this checkout into the locations applications use.
 
-**Choosing a shell selects its complete configuration profile.** Its required tools and plugins are automatic; the wizard asks only about additional applications. Already-installed programs and valid plugin checkouts are skipped.
+**Choosing a shell selects its complete configuration profile.** Its required tools and plugins are automatic; the wizard asks only about additional applications. Healthy programs and valid plugin checkouts are skipped. Failed runtime probes trigger repair, even when the package database says a tool is installed.
 
 ## Contents
 
@@ -306,25 +306,25 @@ The installer adds `~/.local/bin` to its own PATH before probes.
 
 | Tool/group | Installed condition |
 | --- | --- |
-| Most tools | Expected executable on PATH |
-| Java | `javac`, so a JRE alone is insufficient |
+| Most CLI tools | Expected executable successfully runs a harmless version probe (bounded to 10 seconds when `timeout` is available) |
+| Java | Runnable `javac` reporting JDK 21+, as required by JDTLS |
 | ripgrep | `rg` |
 | fd | `fd` or Debian's `fdfind` |
 | bat | `bat` or Debian's `batcat` |
 | Clipboard | Both `xclip` and `wl-copy`; only missing halves are requested |
 | Docker | Docker CLI and successful `docker compose version` |
-| Bash/Zsh nvm | `nvm.sh`, a runnable default Node, and Node's LTS release marker |
-| Fish nvm | Local nvm index and an installed runnable LTS Node |
+| Bash/Zsh nvm | `nvm.sh`, a runnable default Node, its LTS release marker and working npm |
+| Fish nvm | Valid local nvm index matching a runnable installed LTS Node, plus working npm |
 | Codex | PATH, a native Fish LTS bin directory, or nvm-sh's default environment |
-| Zsh plugins | All declared readable entrypoint files in the plugin directory |
+| Zsh plugins | All declared nonempty entrypoint files in the plugin directory |
 | tmux plugin bundle | Executable entrypoints for TPM, resurrect, and continuum |
 | CachyOS Fish defaults | The distro config file exists at its expected system location |
 
-A Node probe recognizes an installed LTS release, not whether it is the newest release or still within its upstream support window. Other PATH checks generally do not enforce versions. Version compatibility still matters for the imported configs.
+A Node probe recognizes an installed LTS release, not whether it is the newest release or still within its upstream support window. Health probes test startup, not service connectivity, authentication or every application feature. Neovim and Java also enforce the configuration minimum versions.
 
-Repeat runs preserve compatible existing programs/plugin versions. Neovim is also checked against the configuration minimum version. They install missing profile requirements even if the selected shell itself exists. Matching config links are skipped; links from another checkout are backed up/replaced when applying this checkout.
+Repeat runs preserve compatible existing programs/plugin versions. Neovim is also checked against the configuration minimum version. They install missing profile requirements even if the selected shell itself exists. Setup verifies selected tool health after installation and before declaring success. Matching config links are skipped; links from another checkout are backed up/replaced when applying this checkout.
 
-If all resolved tools are present, no package-manager call/download is needed. Config linking, an explicit global Zsh request, or a required login-shell/Docker service change can still occur. Setup is not an updater: use normal distro/tool/plugin update commands when you want upgrades.
+If all resolved tools are healthy, no system package-manager call is needed. Neovim setup still checks its plugins, language tools and parsers, installing missing artifacts. Config linking, an explicit global Zsh request, or a required login-shell/Docker service change can still occur. Setup is not an updater: use normal distro/tool/plugin update commands when you want upgrades.
 
 ## Distribution packages
 
@@ -337,7 +337,7 @@ If all resolved tools are present, no package-manager call/download is needed. C
 | Vim | `vim` | `vim` | `vim-enhanced` |
 | fzf / zoxide / bat / ripgrep | Matching package names | Same | Same |
 | fd | `fd-find` | `fd` | `fd-find` (executable `fd`) |
-| Java JDK | `default-jdk` | `jdk-openjdk` | `java-21-openjdk-devel` |
+| Java JDK | `openjdk-21-jdk` | `jdk-openjdk` | `java-21-openjdk-devel` |
 | Python + venv | `python3`, `python3-venv` | `python` | `python3`, `python3-pip` |
 | Go | `golang-go` | `go` | `golang` |
 | C compiler / make | `gcc`, `make` | Same | Same |
@@ -374,7 +374,7 @@ The script does not refresh the database with `-y`, force a full upgrade, or ins
 
 ### DNF
 
-Fedora-family installs query the RPM database to omit already-installed packages, then use syntax shared by DNF4 and DNF5:
+Fedora-family installs consult RPM for prerequisites. A missing or broken selected tool still schedules its packages; packages already recorded by RPM receive `dnf reinstall`. New packages use syntax shared by DNF4 and DNF5:
 
 ```text
 sudo dnf --refresh install -y -- <missing-packages>
@@ -423,9 +423,9 @@ Your main configuration retains the Git/Docker/tmux helpers, Fish-style fzf appe
 
 Examples include `killfzf`, `gcofzf`, `dbf`, smart no-argument `tmux`, Git shortcuts, Docker/Compose shortcuts, and tmux save/restore commands. `dcud` runs `docker compose up -d` and `nb` runs `npm run build` in both Fish and Zsh.
 
-`fish_variables` is included to retain universal prompt settings and Fisher inventory. Fish can update that file at runtime through the linked directory. Review such changes before committing; histories and credentials are not intended repository content.
+`fish_variables` and `fish_plugins` seed a writable user directory once. Fish source files are linked individually; universal preferences, Fisher inventory and local overrides remain in your home. Setup migrates the former whole-directory link with a backup and preserves existing preferences. Fish runtime updates no longer modify these checkout files.
 
-There is no custom `dotfiles/local.fish` override hook in this imported entrypoint. Customize its main/modules/functions directly or use Fish's normal configuration mechanisms.
+Put personal overrides in `$XDG_CONFIG_HOME/fish/local.fish`; they load last and survive repeat setup.
 
 ### Zsh
 
@@ -477,7 +477,7 @@ Zsh plugins are declared in [config/zsh/plugins.list](config/zsh/plugins.list):
 - `jeffreytse/zsh-vi-mode`
 - `zdharma-continuum/fast-syntax-highlighting`
 
-They are cloned during installation into `$XDG_DATA_HOME/zsh/plugins`, or `ZPLUGINDIR`. Startup loads local entrypoints only. `zplugin-update` explicitly runs fast-forward Git pulls; open a new shell after updating. Incomplete plugin directories are reported for repair instead of overwritten.
+They are cloned during installation into `$XDG_DATA_HOME/zsh/plugins`, or `ZPLUGINDIR`. Startup loads local entrypoints only. `zplugin-update` explicitly runs fast-forward Git pulls; open a new shell after updating. Incomplete plugin directories are repaired automatically: clone and verify a replacement first, then archive the original under the run’s backup directory before activating it.
 
 #### Optional global zshenv
 
@@ -502,12 +502,12 @@ The project includes your full system Lua setup rather than a minimal starter:
 
 The configuration requires **Neovim 0.11.3+**. Setup checks the actual version. A missing editor is first requested through the distro package manager. If that package or an existing executable is too old, setup installs the [upstream v0.11.5 runtime](https://github.com/neovim/neovim/releases/tag/v0.11.5) under `$XDG_DATA_HOME/dotfiles/neovim/v0.11.5` and links `~/.local/bin/nvim`. The distro package remains installed. Any previous user launcher is backed up; compatible editors are skipped. The fallback covers Linux x86_64/aarch64 and verifies the downloaded binary can run before activating it.
 
-Automatic dependency resolution supplies the system runtimes, build tools, search tools, clipboard helpers, and download/archive utilities required by this configuration. It does **not** execute every Neovim language-tool/parser/model installation. On a fresh machine, after meeting the requirements in [config/nvim/README.md](config/nvim/README.md), use:
+Automatic dependency resolution supplies system runtimes, build tools, search tools, clipboard helpers and archive utilities. Normal setup then provisions missing editor plugins, Mason tools and parsers. For a config-only installation, provision these explicitly:
 
 ```vim
 :Lazy restore
-:MasonToolsInstall
-:TreesitterInstall
+:MasonToolsInstallSync
+:TreesitterInstall!
 ```
 
 Use `:checkhealth`, `:Mason`, `:ConformInfo`, and `:checkhealth vim.lsp` to inspect the setup. Node/npm, Python with venv support, Go, a C compiler, tree-sitter CLI, and an appropriate JDK are required by particular language/build workflows. Selecting Neovim installs these requirements even when Neovim itself is already present. Arch/Fedora use their Tree-sitter CLI packages; Debian/Ubuntu uses the upstream v0.26.11 binary in `~/.local/bin` (x86_64/aarch64).
@@ -580,7 +580,7 @@ Kitty uses your Maple Mono NF 12 pt profile and includes its local Mocha theme. 
 
 ### Java
 
-`java` installs `default-jdk` on Debian derivatives, `jdk-openjdk` on Arch derivatives, or `java-21-openjdk-devel` on Fedora derivatives. `javac` is the installed-tool probe. The JDK version follows your configured repositories; this is not SDKMAN or a pinned Java-version manager.
+`java` installs `openjdk-21-jdk` on Debian derivatives, `jdk-openjdk` on Arch derivatives, or `java-21-openjdk-devel` on Fedora derivatives. The probe requires `javac` 21+. If an older Debian release lacks an OpenJDK 21 candidate, setup stops with the package name instead of claiming the editor requirements are satisfied.
 
 ```bash
 ./bin/dotfiles packages --tools java --yes
@@ -671,7 +671,7 @@ Defaults below honor the corresponding XDG overrides unless a retained applicati
 | Component | Repository source | User destination |
 | --- | --- | --- |
 | Bash | `shell/bash/bashrc` | `~/.bashrc` |
-| Fish | `config/fish/` | `$XDG_CONFIG_HOME/fish/` |
+| Fish | Individual `config/fish/**/*.fish` sources; user-owned state seeded once | `$XDG_CONFIG_HOME/fish/` |
 | Neovim | `config/nvim/` | `$XDG_CONFIG_HOME/nvim/` |
 | tmux support | `config/tmux/` | `$XDG_CONFIG_HOME/tmux/` |
 | tmux startup | `config/tmux/tmux.conf` | `~/.tmux.conf` |
@@ -731,7 +731,7 @@ Fish, Neovim, tmux support, and supported terminal directories are linked as who
 ./bin/dotfiles unlink --components zsh,tmux,nvim --yes
 ```
 
-Only a symlink storing the exact template path for this checkout is removed. External files/links are skipped. Zsh removal covers its support/bootstrap links; tmux removal covers both the support directory and `~/.tmux.conf`.
+Only a symlink storing the exact template path for this checkout is removed. External files/links are skipped. Fish removal preserves universal preferences, inventory and local overrides. Zsh removal covers its support/bootstrap links; tmux removal covers both the support directory and `~/.tmux.conf`.
 
 `unlink` does not:
 
@@ -812,7 +812,7 @@ Additional limits:
 - Fonts, desktop terminal associations, user credentials, Git identity, SSH configuration, project environments, and local Ollama models are not provisioned.
 - `install --all` manages every template, including several shells and whole application directories; preview its target list first.
 - No general AUR-helper installation, automatic restoration command, or complete system rollback is provided.
-- User/plugin/application runtime files can change through directory symlinks; review repository changes before committing.
+- Fish preferences and Neovim’s writable plugin lockfile live in user directories. Other application directory links can still expose editable checkout files; review changes before committing.
 
 ## Project structure and extension
 
@@ -923,3 +923,38 @@ A passing mocked suite is not a real package-download, daemon, terminal-renderin
 - [Zsh application guide](config/zsh/README.md)
 - [Tmux application guide](config/tmux/README.md)
 - [Konsole scheme notes](config/konsole/README.md)
+
+## Repair and shell switching
+
+Run `./bin/dotfiles setup` again to repair a failed install. CLI health checks
+execute harmless version probes; package records alone never make a broken
+selected tool count as ready. APT uses `--reinstall`; pacman allows same-version
+reinstalls for a repair; Fedora runs `dnf reinstall` for recorded packages.
+Incomplete Zsh/tmux plugins and the managed Neovim runtime are backed up before
+replacement. A launcher in an unrelated PATH directory can still shadow the
+repaired package: the final verification reports that failure instead of success.
+
+Bash, Zsh and Fish expose both nvm-sh's default Node prefix and the newest locally
+installed nvm.fish LTS prefix. Node, npm and globally installed commands such as
+Codex therefore stay discoverable after switching shells. The native manager
+still controls version selection in its own shell. Configure each shell once:
+
+```sh
+./bin/dotfiles setup --shell zsh --terminal none --tools none --keep-shell --yes
+./bin/dotfiles setup --shell fish --terminal none --tools none --keep-shell --yes
+```
+
+Ordinary setup provisions Neovim's missing plugins, Mason language tools and
+Treesitter parsers after linking its config. It waits for installation and
+checks artifacts before reporting success. Config-only setup skips downloads.
+The committed plugin lockfile seeds `$XDG_STATE_HOME/nvim/lazy-lock.json` once;
+subsequent plugin operations write there. `:MasonToolsInstallSync` uses the
+[upstream blocking install command](https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim#commands);
+`:TreesitterInstall!` waits and verifies the configured parsers. First setup can
+take several minutes and requires network access.
+
+The menu prints each question once and updates only a short selection line.
+Arrow keys, j/k, digits and y/n shortcuts remain available; Enter confirms.
+Redirected output and `TERM=dumb` do not receive cursor escape sequences.
+
+Run `./bin/check` to check Bash/Zsh/Fish and Lua syntax and run the offline regression suite. Checks use temporary homes and mocked package/download commands; they do not install system packages or download editor dependencies.

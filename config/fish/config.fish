@@ -9,8 +9,12 @@ end
 #    # smth smth
 #end
 
-set -gx EDITOR vim
-set -gx VISUAL vim
+if not set -q EDITOR
+    set -gx EDITOR nvim
+end
+if not set -q VISUAL
+    set -gx VISUAL $EDITOR
+end
 
 #=====================
 # useful aliases
@@ -259,22 +263,38 @@ set -gx FZF_DEFAULT_OPTS "\
 --color=info:#89b4fa,prompt:#a6e3a1,pointer:#f5c2e7 \
 --color=marker:#f9e2af,spinner:#89dceb,header:#89b4fa"
 
+# File commands work with older distro fzf versions and Debian binary names.
+if command -q fd
+    set -gx FZF_DEFAULT_COMMAND 'fd --type f --hidden --exclude .git --exclude node_modules'
+    set -gx FZF_ALT_C_COMMAND 'fd --type d --hidden --exclude .git --exclude node_modules'
+else if command -q fdfind
+    set -gx FZF_DEFAULT_COMMAND 'fdfind --type f --hidden --exclude .git --exclude node_modules'
+    set -gx FZF_ALT_C_COMMAND 'fdfind --type d --hidden --exclude .git --exclude node_modules'
+else
+    set -gx FZF_DEFAULT_COMMAND "find . -type f -not -path '*/.git/*'"
+    set -gx FZF_ALT_C_COMMAND "find . -type d -not -path '*/.git/*'"
+end
+set -gx FZF_CTRL_T_COMMAND $FZF_DEFAULT_COMMAND
+set -l preview_command 'head -n 300 -- {}'
+if command -q bat
+    set preview_command 'bat --color=always --style=numbers --line-range=:300 {}'
+else if command -q batcat
+    set preview_command 'batcat --color=always --style=numbers --line-range=:300 {}'
+end
+
 # Ctrl + T
 set -gx FZF_CTRL_T_OPTS "\
---walker-skip=.git,node_modules,target,dist,build,.next \
---preview='bat --color=always --style=numbers --line-range=:300 {} 2>/dev/null; or tree -C {} | head -200' \
+--preview='$preview_command 2>/dev/null || ls -lah -- {}' \
 --preview-window='right:55%:border-rounded' \
 --bind='ctrl-/:toggle-preview'"
 
 # Alt + C
 set -gx FZF_ALT_C_OPTS "\
---walker-skip=.git,node_modules,target,dist,build,.next \
 --preview='tree -C {} | head -200' \
 --preview-window='right:55%:border-rounded'"
 
 # Ctrl + R
 set -gx FZF_CTRL_R_OPTS "\
---with-nth=3.. \
 --preview-window=hidden \
 --header='CTRL-R: ordenar  •  SHIFT-DEL: borrar  •  ESC: salir'"
 
@@ -299,4 +319,9 @@ if status is-interactive
     if type -q starship
         starship init fish | source
     end
+end
+
+# User overrides survive repeat setup and never modify the checkout.
+if test -r "$XDG_CONFIG_HOME/fish/local.fish"
+    source "$XDG_CONFIG_HOME/fish/local.fish"
 end

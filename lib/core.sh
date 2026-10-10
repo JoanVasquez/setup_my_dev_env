@@ -31,5 +31,35 @@ validate_list() {
 # before execution. --fail rejects HTTP errors; redirects must also use HTTPS.
 fetch_script() {
     local url="$1" output="$2"
-    curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 "$url" -o "$output"
+    curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' \
+        --tlsv1.2 --retry 3 --connect-timeout 15 --max-time 300 "$url" -o "$output"
+}
+
+# Preserve incomplete user installs before retrying. Download into a staging
+# directory first so interrupted clones do not leave a falsely complete target.
+install_plugin() {
+    local repository="$1" destination="$2" entry="$3" staging archive
+    if ((dry)); then
+        printf 'Repair/install plugin: %s -> %s\n' "$repository" "$destination"
+        run git clone --depth 1 "https://github.com/$repository.git" "$destination"
+        return
+    fi
+    mkdir -p -- "$(dirname "$destination")"
+    staging="$(mktemp -d "$work_dir/plugin.XXXXXX")"
+    run git clone --depth 1 "https://github.com/$repository.git" "$staging/checkout"
+    [[ -s "$staging/checkout/$entry" ]] || die "Missing plugin entrypoint: $repository/$entry"
+    if [[ -e "$destination" || -L "$destination" ]]; then
+        archive="$backup_dir/plugins/${repository##*/}"
+        mkdir -p -- "$(dirname "$archive")"
+        mv -- "$destination" "$archive"
+        printf 'backup: %s\n' "$archive"
+    fi
+    mv -- "$staging/checkout" "$destination"
+}
+
+validate_choice() {
+    local choice="$1"
+    shift
+    [[ "$choice" != *,* ]] || die "Choose one value: $choice"
+    validate_list "$choice" "$@"
 }

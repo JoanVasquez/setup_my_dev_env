@@ -6,25 +6,26 @@ prompt_choice() {
     local variable="$1" label="$2" default="$3"
     shift 3
     local -a menu_options=("$@")
-    local menu_index=0 menu_row menu_key menu_sequence menu_drawn=0
+    local menu_index=0 menu_row menu_key menu_sequence menu_ansi=0
+    # Cursor movement only works when the output itself is a capable terminal.
+    [[ -t 2 && "${TERM:-dumb}" != dumb ]] && menu_ansi=1
     for menu_row in "${!menu_options[@]}"; do
         [[ "${menu_options[menu_row]}" != "$default" ]] || menu_index="$menu_row"
     done
+    printf '%s\n' "$label" >&2
+    for menu_row in "${!menu_options[@]}"; do
+        printf '   %d) %s\n' "$((menu_row + 1))" "${menu_options[menu_row]}" >&2
+    done
+    printf 'Up/Down: move | Enter: select | number: highlight | q: cancel\n' >&2
     while true; do
-        if ((menu_drawn)); then printf '\033[%dA' "$((${#menu_options[@]} + 2))" >&2; fi
-        printf '\r\033[2K%s\n' "$label" >&2
-        for menu_row in "${!menu_options[@]}"; do
-            if ((menu_row == menu_index)); then
-                printf '\r\033[2K > %d) %s\n' "$((menu_row + 1))" "${menu_options[menu_row]}" >&2
-            else
-                printf '\r\033[2K   %d) %s\n' "$((menu_row + 1))" "${menu_options[menu_row]}" >&2
-            fi
-        done
-        printf '\r\033[2KUp/Down: move | Enter: select | number: highlight | q: cancel\n' >&2
-        menu_drawn=1
+        # Update one short line; wrapped question labels no longer corrupt the
+        # screen through assumptions about how many terminal rows they occupy.
+        if ((menu_ansi)); then printf '\r\033[2K' >&2; fi
+        printf 'Selection: %s' "${menu_options[menu_index]}" >&2
+        ((menu_ansi)) || printf '\n' >&2
         IFS= read -r -s -n 1 menu_key || die 'Input closed'
         case "$menu_key" in
-            '') printf -v "$variable" '%s' "${menu_options[menu_index]}"; return ;;
+            '') if ((menu_ansi)); then printf '\n' >&2; fi; printf -v "$variable" '%s' "${menu_options[menu_index]}"; return ;;
             $'\033')
                 menu_sequence=''
                 IFS= read -r -s -n 1 -t 0.2 menu_sequence || true
@@ -125,8 +126,8 @@ resolve_setup() {
     fi
     [[ "$shell_choice" != auto ]] || shell_choice="$(detect_shell)"
     [[ "$terminal_choice" != auto ]] || terminal_choice="$(detect_terminal)"
-    validate_list "$shell_choice" bash fish zsh none
-    validate_list "$terminal_choice" kitty konsole alacritty ghostty none
+    validate_choice "$shell_choice" bash fish zsh none
+    validate_choice "$terminal_choice" kitty konsole alacritty ghostty none
     if ((system_zshenv)); then [[ "$shell_choice" == zsh ]] || die '--system-zshenv requires --shell zsh'; fi
     if [[ "$tools" == none ]]; then tools=""; else validate_list "$tools" "${tools_available[@]}"; fi
     if ((enable_docker || docker_group)); then
@@ -218,9 +219,10 @@ perform_setup() {
         # Clean only this run's temporary downloads, including when a later step fails.
         trap 'rm -rf -- "$work_dir"' EXIT
     fi
-    if ((!no_packages)); then install_packages; install_vendors; fi
+    if ((!no_packages)); then install_packages; install_vendors; verify_installations; fi
     local name
     for name in "${chosen[@]}"; do install_one "$name"; done
+    if ((!no_packages)); then bootstrap_neovim; fi
     install_system_zshenv
     change_login_shell
     printf '\nSetup complete%s. Open a new shell to load the configuration.\n' "$([[ "$dry" == 1 ]] && printf ' (preview only)' || true)"

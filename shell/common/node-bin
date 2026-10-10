@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Print a usable installed Node directory, without downloading or editing state.
+# Both shell families can run binaries installed by either Node manager.
+set -u
+node_bins=()
+node_directory="${NVM_DIR:-$HOME/.nvm}"
+if [[ -s "$node_directory/nvm.sh" ]]; then
+    node_path=$(NVM_DIR="$node_directory" bash -c '
+        source "$NVM_DIR/nvm.sh" --no-use >/dev/null 2>&1 || exit 1
+        nvm which default 2>/dev/null
+    ') || node_path=''
+    if [[ -x "$node_path" ]] && "$node_path" --version >/dev/null 2>&1; then
+        node_bins+=("${node_path%/*}")
+    fi
+fi
+fish_directory="${nvm_data:-${XDG_DATA_HOME:-$HOME/.local/share}/nvm}"
+while IFS= read -r node_path; do
+    [[ -x "$node_path" ]] || continue
+    if [[ $("$node_path" -p 'Boolean(process.release.lts)' 2>/dev/null) == true ]]; then
+        node_bins+=("${node_path%/*}")
+        break
+    fi
+done < <(printf '%s\n' "$fish_directory"/v*/bin/node | sort -Vr)
+((${#node_bins[@]})) || exit 1
+(IFS=:; printf '%s\n' "${node_bins[*]}")

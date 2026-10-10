@@ -6,7 +6,7 @@ zsh_plugins_ready() {
     directory="$(zsh_plugin_directory)"
     while read -r repository entry; do
         [[ -n "$repository" && "$repository" != \#* ]] || continue
-        [[ -r "$directory/${repository##*/}/$entry" ]] || return 1
+        [[ -s "$directory/${repository##*/}/$entry" ]] || return 1
     done < "$ROOT/config/zsh/plugins.list"
 }
 install_zsh_plugins() {
@@ -15,14 +15,11 @@ install_zsh_plugins() {
     while read -r repository entry; do
         [[ -n "$repository" && "$repository" != \#* ]] || continue
         destination="$directory/${repository##*/}"
-        if [[ -r "$destination/$entry" ]]; then
+        if [[ -s "$destination/$entry" ]]; then
             printf 'skip: %s already installed\n' "${repository##*/}"
             continue
         fi
-        [[ ! -e "$destination" ]] || die "Incomplete Zsh plugin directory: $destination; repair or move it before rerunning."
-        if ((!dry)); then mkdir -p "$directory"; fi
-        run git clone --depth 1 "https://github.com/$repository.git" "$destination"
-        if ((!dry)); then [[ -r "$destination/$entry" ]] || die "Missing Zsh plugin entrypoint: $destination/$entry"; fi
+        install_plugin "$repository" "$destination" "$entry"
     done < "$ROOT/config/zsh/plugins.list"
 }
 

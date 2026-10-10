@@ -32,3 +32,10 @@ if command -q bat
 else if command -q batcat
     set -gx MANPAGER 'batcat -l man -p'
 end
+
+# nvm-sh and nvm.fish binaries work in either shell. Native nvm activation
+# may select a different version later in interactive config.fish.
+set -l node_bin (bash "$DOTFILES_HOME/shell/common/node-bin")
+if test -n "$node_bin"
+    fish_add_path --path --prepend (string split : -- "$node_bin")
+end

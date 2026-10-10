@@ -24,7 +24,12 @@ add_package() {
     local -a additions
     IFS=, read -r -a additions <<< "$1"
     for package in "${additions[@]}"; do
-        if [[ " ${pkgs[*]} " != *" $package "* ]] && ! package_installed "$package"; then pkgs+=("$package"); fi
+        if [[ " ${pkgs[*]} " != *" $package "* ]] && { [[ "${2:-0}" == 1 ]] || ! package_installed "$package"; }; then
+            pkgs+=("$package")
+            if [[ "${2:-0}" == 1 ]] && package_installed "$package"; then
+                append_unique repair_pkgs "$package"
+            fi
+        fi
     done
 }
 # Download prerequisites belong only to installers that actually fetch upstream
@@ -41,6 +46,7 @@ add_download_requirements() {
 # Vendor-managed tools are handled later, but their prerequisites are added here.
 build_packages() {
     pkgs=()
+    repair_pkgs=()
     # If every selected tool is present, do not install even general prerequisites.
     ((${#missing_components[@]})) || return 0
     local component mapped_package
@@ -52,21 +58,21 @@ build_packages() {
                 command_exists nvim || add_package "$(package_for nvim)"
                 add_download_requirements; add_command_package tar tar; add_command_package gzip gzip ;;
             starship)
-                if [[ "$family" == arch ]]; then add_package starship
+                if [[ "$family" == arch ]]; then add_package starship 1
                 else add_download_requirements; add_command_package tar tar; add_command_package gzip gzip; fi ;;
             # Arch packages the engine and Compose separately. Preserve an existing engine.
             # Fedora uses its native Moby stack; Debian Docker is handled by its dedicated installer/repository logic.
             docker)
                 if [[ "$family" == arch ]]; then
-                    if ! docker_present; then add_package docker,docker-buildx; fi
-                    if ! compose_present; then add_package docker-compose; fi
+                    if ! docker_present; then add_package docker,docker-buildx 1; fi
+                    if ! compose_present; then add_package docker-compose 1; fi
                 elif [[ "$family" == fedora ]]; then
-                    if ! docker_present; then add_package moby-engine,docker-cli,docker-buildx; fi
-                    if ! compose_present; then add_package docker-compose; fi
+                    if ! docker_present; then add_package moby-engine,docker-cli,docker-buildx 1; fi
+                    if ! compose_present; then add_package docker-compose 1; fi
                 elif ! docker_present; then add_download_requirements
                 fi ;;
             tree-sitter)
-                if [[ "$family" == arch || "$family" == fedora ]]; then add_package tree-sitter-cli
+                if [[ "$family" == arch || "$family" == fedora ]]; then add_package tree-sitter-cli 1
                 else add_download_requirements; add_command_package gzip gzip; fi ;;
             aws)
                 add_download_requirements
@@ -75,7 +81,7 @@ build_packages() {
             lf)
                 if [[ "$family" == fedora ]]; then
                     add_download_requirements; add_command_package tar tar; add_command_package gzip gzip
-                else add_package "$(package_for lf)"; fi ;;
+                else add_package "$(package_for lf)" 1; fi ;;
             nvm) add_download_requirements; add_command_package tar tar; add_command_package gzip gzip ;;
             codex|tpm|zsh-plugins|none) : ;;
             clipboard)
@@ -83,7 +89,7 @@ build_packages() {
                 command_exists wl-copy || add_package wl-clipboard ;;
             *)
                 mapped_package="$(package_for "$component")" || return 1
-                add_package "$mapped_package" ;;
+                add_package "$mapped_package" 1 ;;
         esac
     done
 }
@@ -93,8 +99,10 @@ install_packages() {
     if ((${#pkgs[@]} == 0)); then printf 'No missing distro packages to install.\n'; return; fi
     if [[ "$family" == arch ]]; then
         # Do not refresh repository databases or force a global upgrade here.
-        # --needed also asks pacman to skip packages already at the requested version.
-        privileged pacman -S --needed --noconfirm -- "${pkgs[@]}"
+        # Failed runtime probes must permit reinstallation of the same package version.
+        local -a pacman_options=(--needed)
+        ((${#repair_pkgs[@]} == 0)) || pacman_options=()
+        privileged pacman -S "${pacman_options[@]}" --noconfirm -- "${pkgs[@]}"
     elif [[ "$family" == fedora ]]; then
         if ((!dry)) && ! command_exists dnf; then
             die 'Fedora package installation requires dnf. Use setup --no-packages for configs.'
@@ -102,6 +110,7 @@ install_packages() {
         # DNF4 and DNF5 share this syntax. Missing package names abort the
         # transaction; never use --skip-unavailable or --allowerasing.
         privileged dnf --refresh install -y -- "${pkgs[@]}"
+        if ((${#repair_pkgs[@]})); then privileged dnf reinstall -y -- "${repair_pkgs[@]}"; fi
     else
         privileged apt-get update
         # Check candidate availability after refreshing APT, before requesting installation.
@@ -113,8 +122,8 @@ install_packages() {
                 [[ -n "$candidate" && "$candidate" != '(none)' ]] || die "No APT candidate for $package. Choose another terminal/tool or enable a suitable repository."
             done
         fi
-        # --no-upgrade preserves already-installed packages named in this request.
-        privileged apt-get install -y --no-upgrade -- "${pkgs[@]}"
+        # Reinstall requested packages when the runtime probe failed.
+        privileged apt-get install -y --reinstall -- "${pkgs[@]}"
     fi
 }
 # Run upstream installers only for missing tools, after distro prerequisites are ready.
@@ -135,6 +144,26 @@ install_vendors() {
     done
     # Codex must be installed after Node even when listed before nvm.
     if [[ " ${missing_components[*]} " == *' codex '* ]]; then install_codex; fi
+    # New Node installations must also be visible to subsequent editor/tool processes.
+    local node_bins
+    if node_bins="$(bash "$ROOT/shell/common/node-bin")"; then export PATH="$node_bins:$PATH"; fi
+    hash -r
     # Service/group choices still apply when Docker itself was skipped.
     if [[ " ${package_components[*]} " == *' docker '* ]]; then configure_docker; fi
+}
+
+# Do not declare success based on package-manager exit status alone. Report all
+# failures together, including stale user launchers shadowing repaired packages.
+verify_installations() {
+    ((dry)) && return 0
+    hash -r
+    local component
+    local -a failures=()
+    for component in "${package_components[@]}"; do
+        if ! tool_installed "$component"; then failures+=("$component"); fi
+    done
+    if ((${#failures[@]})); then
+        die "Runtime verification failed: ${failures[*]}. Check PATH overrides and run ./bin/dotfiles doctor; setup can be rerun after repair."
+    fi
+    printf 'Verified selected tools and requirements.\n'
 }
