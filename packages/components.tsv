@@ -1,6 +1,6 @@
 # Whitespace-separated columns: logical tool name, APT, pacman, and DNF package name(s).
 # Commas group multiple packages in a cell. Vendor installers (AWS/nvm/Docker on Debian)
-# are dispatched in lib/packages.sh instead of being listed as direct package mappings.
+# are dispatched in lib/packages/vendors.sh instead of being listed as direct package mappings.
 # component Debian-family Arch-family Fedora-family
 bash bash bash bash
 fish fish fish fish
