@@ -1,7 +1,54 @@
 # Neovim setup
 
-The UI uses Tokyo Night (night), a matching global statusline, compact buffer tabs,
-and rounded completion and search panels. A Nerd Font is recommended for icons.
+Productivity additions: Git signs and hunk staging, Diffview review/history,
+Flash jumps, Mini text objects/surround/pairs/alignment, Grug Far search and
+replace, TODO navigation, Trouble diagnostics/outline, Persistence sessions,
+ToggleTerm terminals, and Overseer project tasks. Plugins load on demand.
+
+| Key (leader = Space) | Action |
+| --- | --- |
+| `s`, `S` | Labeled jump / select a Treesitter syntax node |
+| `saiw)` / `sd)` / `sr)"` | Surround word with parentheses / delete parentheses / replace with quotes |
+| `gS` | Split or join arguments and other supported structures |
+| `ga`, `gA` (visual) | Align selection / align with preview |
+| `af`, `if`, `aa`, `ia` | Around/inside function call or argument text objects |
+| `[h`, `]h` | Previous / next Git hunk |
+| `<leader>ghs`, `<leader>ghp` | Stage/unstage hunk or selected lines / preview hunk |
+| `<leader>ghb`, `<leader>tb` | Blame line / toggle inline blame |
+| `<leader>gd`, `<leader>gH`, `<leader>gq` | Project diff / file history / close diff view |
+| `<leader>sr`, `<leader>sw` | Project search and replace / prefill cursor word |
+| `<leader>ft`, `[t`, `]t` | Find TODOs / previous / next TODO |
+| `<leader>ll`, `<leader>lb` | Project / current buffer diagnostics panel |
+| `<leader>cs`, `<leader>lq` | Symbol outline / quickfix panel |
+| `<leader>pr`, `<leader>pl`, `<leader>ps` | Restore project / last / select session |
+| `<leader>pd` | Stop saving the current session |
+| `<leader>tt`, `Ctrl-\` | Toggle persistent floating terminal |
+| `Esc Esc` (terminal) | Return to Normal mode |
+| `<leader>rr`, `<leader>rt`, `<leader>ra` | Run task / task output / task actions |
+| `J`, `K` (visual) | Move selected lines down / up |
+| `[q`, `]q` | Previous / next quickfix result |
+
+Search and replace opens an editable preview; use Grug Far's help (`g?`) for
+replace actions. Nothing is replaced when the panel opens. Session restore is
+explicit; sessions save the workspace layout, while swap and undo protect edits.
+Open Neovim from the project root for project-scoped sessions, searches and tasks.
+Overseer discovers supported project task definitions (such as package.json,
+Makefiles and VS Code tasks); run commands only when you choose a task.
+The terminal keeps its shell alive when hidden. Native `gcc` / `gc` commenting
+remains available. Flash uses `s` / `S`; use `cl` / `cc` for character/line changes.
+Mini surround's `sa` / `sd` / `sr` prefixes work without the leader.
+
+The UI uses a custom **Ocean & Mint** palette built on Tokyo Night Moon: ocean-blue
+headers, mint-green active lines and indent scopes, and matching explorer and buffer
+tabs, with violet keywords, rose identifiers, coral constants, and amber search
+matches. Neo-tree stays transparent. The transparent background preserves terminal opacity and blur; popup panels
+use navy for readability. A Nerd Font is recommended for icons.
+The statusline uses blue for Normal, green for Insert, violet for Visual, coral
+for Replace, and amber for Command mode, and shows attached language servers in
+wide windows. Search panels switch to a vertical layout in narrow windows.
+Edit `lua/config/palette.lua` to customize the shared colors.
+If `~/.config/nvim` links to this directory, changes apply to both immediately;
+restart Neovim to reload the entire configuration.
 Code opens without wrapping; `<leader>tw` toggles wrapping.
 
 Requires Neovim 0.11.3+, Git, Node.js/npm, Python 3 with venv support, Go (for sqls installation),

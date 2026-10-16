@@ -12,7 +12,7 @@ return {
 			"██████╔╝╚██████╔╝██████╔╝╚██████╔╝██████╔╝███████╗ ╚████╔╝ ",
 			"╚═════╝  ╚═════╝ ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝  ╚═══╝  ",
 			"",
-			"N E O V I M   /   A   Q U I E T   P L A C E   T O   B U I L D",
+			"N E O V I M   /   O C E A N   &   M I N T",
 		}
 		dashboard.section.header.opts.hl = "AlphaHeader"
 		local icon = function(glyph)
@@ -23,7 +23,11 @@ return {
 			dashboard.button("r", icon("") .. "  Recent files", "<cmd>Telescope oldfiles<CR>"),
 			dashboard.button("g", icon("󰱼") .. "  Search project", "<cmd>Telescope live_grep<CR>"),
 			dashboard.button("n", icon("") .. "  New file", "<cmd>ene | startinsert<CR>"),
-			dashboard.button("c", icon("") .. "  Configuration", "<cmd>edit " .. vim.fn.fnameescape(vim.fn.stdpath("config") .. "/init.lua") .. "<CR>"),
+			dashboard.button(
+				"c",
+				icon("") .. "  Configuration",
+				"<cmd>edit " .. vim.fn.fnameescape(vim.fn.stdpath("config") .. "/init.lua") .. "<CR>"
+			),
 			dashboard.button("l", icon("󰒲") .. "  Plugins", "<cmd>Lazy<CR>"),
 			dashboard.button("q", icon("󰅚") .. "  Quit", "<cmd>qa<CR>"),
 		}
@@ -31,7 +35,7 @@ return {
 			button.opts.hl = "AlphaButtons"
 			button.opts.hl_shortcut = "AlphaShortcut"
 		end
-		dashboard.section.footer.val = "Make something worth making."
+		dashboard.section.footer.val = "Blue skies. Green lights. Build something."
 		dashboard.section.footer.opts.hl = "AlphaFooter"
 		dashboard.config.layout[1].val = 3
 		require("alpha").setup(dashboard.config)

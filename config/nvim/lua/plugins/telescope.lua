@@ -67,12 +67,15 @@ return {
 				border = true,
 				prompt_prefix = "   ",
 				selection_caret = "▎ ",
+				layout_strategy = "flex",
 				sorting_strategy = "ascending",
 				layout_config = {
 					prompt_position = "top",
 					width = 0.85,
 					height = 0.75,
 					horizontal = { preview_width = 0.55 },
+					vertical = { preview_height = 0.5 },
+					flex = { flip_columns = 110 },
 				},
 				mappings = {
 					i = {

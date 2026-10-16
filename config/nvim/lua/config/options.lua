@@ -67,6 +67,19 @@ opt.swapfile = true
 opt.backup = false
 opt.writebackup = true
 
+-- Resolve swap warnings explicitly when plugins open files through the API.
+vim.api.nvim_create_autocmd("SwapExists", {
+	group = vim.api.nvim_create_augroup("SwapFilePrompt", { clear = true }),
+	callback = function(event)
+		local choice = vim.fn.confirm(
+			("A swap file exists for:\n%s\n\nSwap: %s\n\nRecover only if the other editor has stopped."):format(event.file, vim.v.swapname),
+			"&Read-only\n&Recover\n&Edit anyway\n&Cancel",
+			4
+		)
+		vim.v.swapchoice = ({ "o", "r", "e", "q" })[choice] or "q"
+	end,
+})
+
 -- Better command completion
 opt.wildmenu = true
 opt.wildmode = "longest:full,full"
