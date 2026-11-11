@@ -23,6 +23,7 @@ source_path() { case "$1" in
     starship) echo "$ROOT/config/starship/starship.toml" ;;
     kitty | alacritty) echo "$ROOT/config/$1" ;;
     konsole) echo "$ROOT/config/konsole/Moon.colorscheme" ;;
+    konsole-profile) echo "$ROOT/config/konsole/Dev Environment.profile" ;;
     esac }
 # Map each component to the location its application reads.
 # ${XDG_CONFIG_HOME:-$HOME/.config} uses the XDG override when set, otherwise the default.
@@ -47,4 +48,5 @@ target_path() { case "$1" in
     starship) echo "${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml" ;;
     kitty | alacritty) echo "${XDG_CONFIG_HOME:-$HOME/.config}/$1" ;;
     konsole) echo "${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Moon.colorscheme" ;;
+    konsole-profile) echo "${XDG_DATA_HOME:-$HOME/.local/share}/konsole/Dev Environment.profile" ;;
     esac }

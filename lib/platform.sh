@@ -59,6 +59,20 @@ detect_terminal() {
     printf 'none\n'
 }
 
+# Desktop detection is informational; multiple desktops can safely coexist.
+# Prefer the active session instead of guessing from installed packages.
+detect_desktop() {
+    local current="${XDG_CURRENT_DESKTOP:-${XDG_SESSION_DESKTOP:-${DESKTOP_SESSION:-}}}"
+    case "$current" in
+        *KDE*|*kde*|*Plasma*|*plasma*) printf 'kde\n' ;;
+        *Hyprland*|*hyprland*) printf 'hyprland\n' ;;
+        *GNOME*|*gnome*) printf 'gnome\n' ;;
+        *XFCE*|*Xfce*|*xfce*) printf 'xfce\n' ;;
+        '') printf 'none\n' ;;
+        *) printf '%s\n' "$current" ;;
+    esac
+}
+
 # OSTree/image-based desktops require a different installation lifecycle.
 # Keep config-only operations available instead of attempting host DNF writes.
 fedora_atomic() {

@@ -87,6 +87,7 @@ If all resolved tools are healthy, no system package-manager call is needed. Neo
 | eza / tree / fastfetch | Matching package names | Same | Same |
 | lf | `lf` | `lf` | Upstream r42 binary |
 | Kitty / Konsole / Alacritty / Ghostty | Matching package names, if available | Same | Same, from configured repositories |
+| KDE Plasma baseline | `kde-standard`, KDE portal | `plasma-meta`, Konsole, Dolphin, Ark | Plasma desktop/workspace, KDE portal, Konsole, Dolphin, Ark |
 | Clipboard | `xclip`, `wl-clipboard` | Same | Same |
 | `col` | `bsdextrautils` | `util-linux` | `util-linux` |
 | `chsh` (when needed for login-shell activation) | `passwd` | `util-linux` | `util-linux` |

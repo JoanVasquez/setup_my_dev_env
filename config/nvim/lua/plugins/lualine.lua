@@ -3,6 +3,8 @@ return {
 	dependencies = { "nvim-tree/nvim-web-devicons" },
 	opts = function()
 		local p = require("config.palette")
+		local capslock = require("config.capslock")
+		capslock.setup()
 		local function mode(accent)
 			return {
 				a = { fg = p.bg, bg = accent, gui = "bold" },
@@ -32,7 +34,11 @@ return {
 						return " " .. mode
 					end,
 				} },
-				lualine_b = { { "branch", icon = "" }, "diff" },
+				lualine_b = {
+					{ capslock.status, color = { fg = p.bg, bg = p.amber, gui = "bold" } },
+					{ "branch", icon = "" },
+					"diff",
+				},
 				lualine_c = { { "filename", path = 1 }, "diagnostics" },
 				lualine_x = {
 					{

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Collect preferences only. No packages or configs are changed during these prompts.
 setup_wizard() {
-    printf 'Detected distro: %s (%s) | shell: %s | terminal: %s\n' "$(os_field ID)" "$family" "$(detect_shell)" "$(detect_terminal)"
+    ui_banner
+    printf 'System: %s (%s)  ·  Desktop: %s  ·  Shell: %s  ·  Terminal: %s\n' \
+        "$(os_field ID)" "$family" "$(detect_desktop)" "$(detect_shell)" "$(detect_terminal)" >&2
     # Unattended and preview modes use CLI choices/defaults without reading stdin.
     if ((yes || dry)); then return; fi
     [[ -t 0 ]] || die 'Interactive setup needs a terminal; use --yes with explicit selections.'
@@ -15,11 +17,11 @@ setup_wizard() {
     [[ "$shell_choice" != auto ]] || shell_choice="$(detect_shell)"
     if (( !tools_explicit )); then
         local tool label
-        local -a wizard_tools=(nvim tmux docker java codex aws) offered_tools=() menu_labels=()
+        local -a wizard_tools=(nvim tmux docker java codex aws kde) offered_tools=() menu_labels=()
         for tool in "${tools_available[@]}"; do append_unique wizard_tools "$tool"; done
         tools=""
         refresh_wizard_dependencies
-        printf 'Required by the selected shell (automatic): %s\n' "${automatic_components[*]:-none}"
+        ui_note "Profile requirements are automatic: ${automatic_components[*]:-none}"
         # Shell requirements and internal plugin bundles cannot be deselected.
         # Resolve optional dependencies after the checklist so its rows stay stable.
         for tool in "${wizard_tools[@]}"; do
@@ -54,6 +56,7 @@ tool_label() {
         java) printf 'Java JDK' ;;
         codex) printf 'Codex CLI' ;;
         aws) printf 'AWS CLI' ;;
+        kde) printf 'KDE Plasma desktop + core applications' ;;
         *) printf '%s' "$1" ;;
     esac
 }

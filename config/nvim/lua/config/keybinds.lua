@@ -12,6 +12,29 @@ for key, direction in pairs({ h = "h", j = "j", k = "k", l = "l" }) do
 	map("n", "<C-" .. key .. ">", "<cmd>wincmd " .. direction .. "<cr>", "Focus " .. direction .. " window")
 end
 map("x", "p", '"_dP', "Paste without replacing register")
+local yank_view
+vim.keymap.set("n", "y", function()
+	yank_view = { win = vim.api.nvim_get_current_win(), view = vim.fn.winsaveview() }
+	return "y"
+end, { expr = true, desc = "Yank without moving cursor" })
+vim.api.nvim_create_autocmd("TextYankPost", {
+	group = vim.api.nvim_create_augroup("KeepYankCursor", { clear = true }),
+	callback = function()
+		local saved = yank_view
+		yank_view = nil
+		if saved and vim.v.event.operator == "y" and not vim.v.event.visual
+			and saved.win == vim.api.nvim_get_current_win() then
+			vim.fn.winrestview(saved.view)
+		end
+	end,
+})
+vim.api.nvim_create_autocmd("ModeChanged", {
+	group = "KeepYankCursor",
+	pattern = "no*:*",
+	callback = function()
+		yank_view = nil
+	end,
+})
 map("n", "<Tab>", "<cmd>bnext<cr>", "Next buffer")
 map("n", "<S-Tab>", "<cmd>bprevious<cr>", "Previous buffer")
 map("n", "<leader>x", "<cmd>Bdelete<cr>", "Close buffer")

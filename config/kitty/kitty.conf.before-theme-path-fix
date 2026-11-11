@@ -1,0 +1,34 @@
+# vim:fileencoding=utf-8:foldmethod=marker
+
+include Catppuccin-Mocha.conf
+
+# Font
+font_size        12.0
+font_family      family="Maple Mono NF"
+bold_font        auto
+italic_font      auto
+bold_italic_font auto
+
+# Cursor
+cursor_trail 1
+
+# Window
+window_margin_width 0
+window_padding_width 14
+# Keep text readable over light wallpapers while retaining subtle transparency.
+background_opacity 0.96
+confirm_os_window_close 0
+
+# Terminal features
+copy_on_select yes
+strip_trailing_spaces smart
+
+# Keybinds
+map ctrl+c copy_or_interrupt
+map ctrl+equal change_font_size all +1.0
+map ctrl+minus change_font_size all -1.0
+map ctrl+0 change_font_size all 0
+include themes/midnight.conf
+
+# Follow the selected Quickshell palette.
+include ../quickshell/theme/kitty-current.conf

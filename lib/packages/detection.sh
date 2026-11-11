@@ -94,6 +94,7 @@ java_compatible() {
 # javac verifies a JDK; Debian may expose fd/bat as fdfind/batcat.
 tool_installed() {
     case "$1" in
+        kde) command_exists plasmashell && command_exists kwin_wayland && command_exists konsole && command_exists dolphin ;;
         nvim) command_exists nvim && neovim_compatible ;;
         nvm) nvm_ready ;;
         zsh-plugins) zsh_plugins_ready ;;

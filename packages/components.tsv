@@ -18,6 +18,9 @@ kitty kitty kitty kitty
 konsole konsole konsole konsole
 alacritty alacritty alacritty alacritty
 ghostty ghostty ghostty ghostty
+# Desktop profile: Plasma plus a practical KDE application baseline. Display
+# manager activation stays an explicit OS/user decision.
+kde kde-standard,xdg-desktop-portal-kde plasma-meta,konsole,dolphin,ark plasma-desktop,plasma-workspace,xdg-desktop-portal-kde,konsole,dolphin,ark
 clipboard xclip,wl-clipboard xclip,wl-clipboard xclip,wl-clipboard
 eza eza eza eza
 lf lf lf -

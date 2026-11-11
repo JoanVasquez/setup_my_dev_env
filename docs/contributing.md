@@ -13,7 +13,7 @@ lib/platform.sh              Shared Bash/Zsh-compatible distro and shell detecti
 lib/cli/                     Selection catalog, help, arguments, runtime, dispatch
 lib/commands/                Packages-only handler, doctor, alias listing
 lib/setup/                   Wizard, resolved plan, login-shell change, execution
-lib/ui/                      Dependency-free menus and confirmation
+lib/ui/                      Shared styling, dependency-free menus, confirmation
 lib/config/                  Paths, component selection, links, profiles, Fish migration
 lib/packages/                Health probes, dependencies, package plan, manager, vendors
 lib/installers/              One module per vendor/runtime or plugin bundle

@@ -1,8 +1,18 @@
-# Modular Linux dotfiles
+# Dev Environment
 
-A modular installer for your Linux shell, editor, terminal, prompt, and development tools. It detects Debian/Ubuntu, Arch-family, and Fedora-family distributions, lets you choose Bash, Fish, or Zsh, installs missing requirements, backs up existing configuration, and links this checkout into the locations applications use.
+A production-minded Linux workstation setup for shells, editors, terminals, prompts, and development tooling. It detects Debian/Ubuntu, Arch-family, and Fedora-family distributions, resolves dependencies, backs up existing configuration, and links this checkout into the locations applications use.
 
-**Choosing a shell selects its complete configuration profile.** Its required tools and plugins are automatic; the wizard asks only about additional applications. Healthy programs and valid plugin checkouts are skipped. Failed runtime probes trigger repair, even when the package database says a tool is installed.
+The default experience mirrors the maintained workstation profile: **Zsh + Starship + Kitty + tmux + Neovim**, with a consistent Catppuccin-inspired terminal experience and portable XDG paths. Bash, Fish, Alacritty, Ghostty, and Konsole remain supported alternatives. An optional KDE Plasma profile installs a practical desktop baseline without replacing or reconfiguring an existing desktop session.
+
+## Why this project
+
+- Safe by default: dry runs, explicit confirmation, timestamped backups, and ownership-aware unlinking.
+- Repeatable: healthy tools and valid plugin checkouts are skipped; incomplete installations are repaired.
+- Portable: CachyOS/Arch, Debian/Ubuntu, and Fedora use one dependency graph with distro-specific packages.
+- Testable: syntax validation and 100+ offline behavior tests cover planning, linking, shells, plugins, and menus.
+- Polished: the interactive wizard provides keyboard navigation, live selection state, and a concrete review plan before any change.
+
+**Choosing a shell selects its complete configuration profile.** Its required tools and plugins are automatic; the wizard asks only about additional applications. Failed runtime probes trigger repair even when the package database says a tool is installed.
 
 ## Quick start
 
@@ -54,6 +64,7 @@ For a standalone tool, use `packages`:
 - [Packages and dependencies](docs/packages.md): profile requirements, detection, and distro mappings.
 - [Shells and development tools](docs/shells.md): Bash/Fish/Zsh, aliases, Node, Docker, Java, and AWS.
 - [Editors and terminals](docs/applications.md): Neovim, tmux, prompts, and terminal profiles.
+- [KDE Plasma](docs/kde.md): installation profile, Wayland portals, Konsole, coexistence, and first login.
 - [Maintenance](docs/maintenance.md): managed paths, backups, removal, repair, and troubleshooting.
 - [Contributing](docs/contributing.md): architecture, extension points, and offline tests.
 - [Upstream references](docs/references.md).

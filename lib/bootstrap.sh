@@ -9,7 +9,7 @@ for module in \
     config/fish packages/plan packages/manager packages/vendors \
     installers/node installers/starship installers/tmux installers/tree-sitter \
     installers/lf installers/neovim installers/docker installers/aws \
-    installers/zsh ui/menu setup/wizard setup/plan \
+    installers/zsh ui/style ui/menu setup/wizard setup/plan \
     setup/login-shell setup/execute commands/packages commands/doctor \
     commands/aliases cli/dispatch; do
     source "$ROOT/lib/$module.sh"

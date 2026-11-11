@@ -38,15 +38,20 @@ The terminal keeps its shell alive when hidden. Native `gcc` / `gc` commenting
 remains available. Flash uses `s` / `S`; use `cl` / `cc` for character/line changes.
 Mini surround's `sa` / `sd` / `sr` prefixes work without the leader.
 
-The UI uses a custom **Ocean & Mint** palette built on Tokyo Night Moon: ocean-blue
-headers, mint-green active lines and indent scopes, and matching explorer and buffer
-tabs, with violet keywords, rose identifiers, coral constants, and amber search
-matches. Neo-tree stays transparent. The transparent background preserves terminal opacity and blur; popup panels
-use navy for readability. A Nerd Font is recommended for icons.
+The UI reads the active Quickshell palette and applies matching Aurora, Crimson,
+Sunset, Forest, or Violet colors on top of Tokyo Night Moon. Existing Neovim
+sessions notice palette changes automatically. Neo-tree stays transparent, so the
+themed Kitty background preserves terminal opacity and Hyprland blur. A Nerd Font
+is recommended for icons. Use `Super+N` to open Neovim in its acrylic window.
 The statusline uses blue for Normal, green for Insert, violet for Visual, coral
 for Replace, and amber for Command mode, and shows attached language servers in
 wide windows. Search panels switch to a vertical layout in narrow windows.
-Edit `lua/config/palette.lua` to customize the shared colors.
+On Linux, a bold amber `CAPS LOCK` warning appears beside the mode while Caps
+Lock is enabled. It checks readable keyboard LEDs in `/sys/class/leds` every
+half second, including while idle, and disappears when Caps Lock is off.
+Detection requires local keyboard LED access; it does not track a remote SSH
+client's keyboard. No additional plugin or command is required.
+Edit `lua/config/palette.lua` to customize the per-theme editor colors.
 If `~/.config/nvim` links to this directory, changes apply to both immediately;
 restart Neovim to reload the entire configuration.
 Code opens without wrapping; `<leader>tw` toggles wrapping.
@@ -76,6 +81,7 @@ restore the plugin versions in that user lockfile,
 | JavaScript, TypeScript, React | TypeScript LSP + project ESLint | Prettier |
 | HTML, CSS, SCSS | HTML/CSS LSP, Emmet, project Tailwind | Prettier |
 | Django HTML under `templates/` | HTML LSP + Emmet | djLint |
+| QML | Qt qmlls | qmlformat |
 | Bash | Bash LSP + ShellCheck | shfmt |
 | Dockerfile | Docker LSP + Hadolint | No external formatter |
 | Docker Compose | Compose LSP + YAML schemas | Prettier |
@@ -103,6 +109,16 @@ dialect = postgres
 SQLFluff also recognizes SQLFluff sections in `pyproject.toml` and supported INI
 files. A Python project file without those sections does not enable SQL formatting.
 
+QML uses Qt 6's `qmlls` and `qmlformat` from your Qt installation (outside
+Mason). Executables on PATH, their `6`-suffixed names, and the standard Linux
+Qt 6 bin directories are detected automatically. Install Qt 6 declarative
+development tools if they are missing. Run `:TreesitterInstall!` after updating
+to install the `qmljs` and `qmldir` parsers. Completion, diagnostics, navigation,
+and formatting use the existing LSP mappings and format-on-save settings.
+For project-specific imports and C++ types, build the project and configure
+[Qt's build directory discovery](https://doc.qt.io/qt-6/qtqml-tooling-qmlls.html#setting-up-the-build-directory)
+with `.qmlls.ini` or `QMLLS_BUILD_DIRS`.
+
 SQL schema completion needs a project `sqls.yml` connection configuration.
 Keep credentials out of version control. See the
 [sqls configuration](https://github.com/sqls-server/sqls#db-configuration).
@@ -114,10 +130,22 @@ and Java debug/test extensions are not included.
 
 The existing Minuet configuration provides inline AI completion through local
 Ollama at `127.0.0.1:11434`, using `qwen2.5-coder:7b`. Start Ollama and install
-that model separately. `<leader>at` toggles suggestions for the current buffer,
+that model separately with `ollama pull qwen2.5-coder:7b`.
+This machine uses a user-local Ollama installation (`~/.local/bin/ollama`) and
+the `ollama.service` user service, which starts at login. Manage it with
+`systemctl --user restart ollama` and inspect logs with
+`journalctl --user -u ollama`. The service listens only on localhost, uses a
+4096-token context, and keeps the model loaded for 30 minutes after use.
+Run `ollama ps` to check GPU usage; `ollama stop qwen2.5-coder:7b` frees the
+model's GPU memory until the next request. The first suggestion may take longer
+while the model loads; Minuet allows up to 30 seconds for a request.
+
+`<leader>at` toggles suggestions for the current buffer,
 including before entering Insert mode. AI starts correctly in the first opened
 code file and skips automatic requests for generated, large, and special buffers.
 Insert-mode `Ctrl-l` accepts a suggestion and `Ctrl-g` accepts one line.
+`Ctrl-x` dismisses it. Ghost text is hidden while the completion popup is open;
+use `Ctrl-e` to close that popup. Automatic AI suggestions are disabled in Markdown.
 
 Useful commands and keys (leader is Space):
 

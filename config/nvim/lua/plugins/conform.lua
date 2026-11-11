@@ -38,6 +38,8 @@ return {
 		local formatters_by_ft = {
 			lua = { "stylua" },
 			python = { "ruff_organize_imports", "ruff_format" },
+			qml = { "qmlformat" },
+			qmljs = { "qmlformat" },
 			sh = { "shfmt" },
 			bash = { "shfmt" },
 			htmldjango = { "djlint" },
@@ -62,6 +64,7 @@ return {
 		return {
 			formatters_by_ft = formatters_by_ft,
 			formatters = {
+				qmlformat = { command = require("config.qml").tool("qmlformat") },
 				djlint = { prepend_args = { "--profile", "django" } },
 				sqlfluff = { cwd = sql_root, require_cwd = true },
 			},

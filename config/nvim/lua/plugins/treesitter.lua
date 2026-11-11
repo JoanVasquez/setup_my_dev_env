@@ -24,6 +24,10 @@ return {
 				"typescript",
 				"tsx",
 
+				-- Qt / QML
+				"qmljs",
+				"qmldir",
+
 				-- Python
 				"python",
 
@@ -74,7 +78,16 @@ return {
 				callback = function(event)
 					local buffers = require("config.buffers")
 					if buffers.can_edit(event.buf) and not buffers.is_large(event.buf) then
-						pcall(vim.treesitter.start, event.buf)
+						local started = pcall(vim.treesitter.start, event.buf)
+						local language = vim.treesitter.language.get_lang(vim.bo[event.buf].filetype)
+						local has_indents, query = pcall(vim.treesitter.query.get, language, "indents")
+
+						-- Use syntax-aware indentation when this parser provides rules for it.
+						-- This handles new lines inside (), [] and {} more reliably than
+						-- the generic 'smartindent' fallback.
+						if started and has_indents and query then
+							vim.bo[event.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+						end
 					end
 				end,
 			})

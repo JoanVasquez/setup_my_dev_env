@@ -46,3 +46,11 @@ class MenuTests(unittest.TestCase):
         result = self.menu("\x1b[B\n", mode="single", default="two")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("RESULT=three", result.stdout)
+
+    def test_home_and_end_navigation(self):
+        result = self.menu("\x1b[F\n", mode="single")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("RESULT=three", result.stdout)
+        result = self.menu("\x1b[F\x1b[H\n", mode="single")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("RESULT=one", result.stdout)

@@ -44,3 +44,15 @@ vim.api.nvim_create_autocmd("FileType", {
 		vim.opt_local.softtabstop = 4
 	end,
 })
+
+-- Prose should stay readable without changing the file's actual line breaks.
+vim.api.nvim_create_autocmd("FileType", {
+	group = vim.api.nvim_create_augroup("markdown-reading", { clear = true }),
+	pattern = { "markdown", "markdown.mdx" },
+	callback = function()
+		vim.opt_local.wrap = true
+		vim.opt_local.linebreak = true
+		vim.opt_local.breakindent = true
+		vim.opt_local.showbreak = "↪ "
+	end,
+})

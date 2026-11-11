@@ -13,5 +13,5 @@ perform_setup() {
     if ((!no_packages)); then bootstrap_neovim; fi
     install_system_zshenv
     change_login_shell
-    printf '\nSetup complete%s. Open a new shell to load the configuration.\n' "$([[ "$dry" == 1 ]] && printf ' (preview only)' || true)"
+    ui_success "Setup complete$([[ "$dry" == 1 ]] && printf ' (preview only)' || true). Open a new shell to load the configuration."
 }

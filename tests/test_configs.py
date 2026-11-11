@@ -28,9 +28,11 @@ class ConfigsTests(InstallerTestCase):
         for component in ("nvim", "tmux", "kitty", "alacritty", "ghostty"):
             self.assertTrue((self.home / ".config" / component).is_symlink())
         self.assertTrue((self.home / ".local/share/konsole/Moon.colorscheme").is_symlink())
+        self.assertTrue((self.home / ".local/share/konsole/Dev Environment.profile").is_symlink())
         self.cli("unlink", "--all", "--yes")
         self.assertFalse((self.home / ".bashrc").exists())
         self.assertFalse((self.home / ".config/nvim").exists())
+        self.assertFalse((self.home / ".local/share/konsole/Dev Environment.profile").exists())
         self.assertFalse(self.log.exists())
 
     def test_zsh_links_back_up_startup_files_and_preserve_local_override(self):

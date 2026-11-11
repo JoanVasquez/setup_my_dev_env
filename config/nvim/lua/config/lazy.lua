@@ -2,7 +2,14 @@ local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if vim.fn.filereadable(lazypath .. "/lua/lazy/init.lua") == 0 then
 	-- An interrupted clone must not count as a working plugin manager.
 	local staging = lazypath .. ".install-" .. vim.fn.getpid()
-	local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", "https://github.com/folke/lazy.nvim.git", staging })
+	local out = vim.fn.system({
+		"git",
+		"clone",
+		"--filter=blob:none",
+		"--branch=stable",
+		"https://github.com/folke/lazy.nvim.git",
+		staging,
+	})
 	if vim.v.shell_error ~= 0 then
 		error("Failed to clone lazy.nvim:\n" .. out)
 	end

@@ -6,7 +6,7 @@ local opt = vim.opt
 
 -- Line numbers
 opt.number = true
-opt.relativenumber = true
+-- opt.relativenumber = true
 opt.cursorline = true
 opt.cursorlineopt = "number,line"
 opt.numberwidth = 4
@@ -57,7 +57,13 @@ opt.whichwrap:append("<,>,[,],h,l")
 
 -- Performance
 opt.updatetime = 250
-opt.timeoutlen = 400
+
+-- Allow plenty of time between keys in multi-key mappings.
+opt.timeout = true
+opt.timeoutlen = 10000
+-- Decode terminal key sequences quickly, independently of mapping timeouts.
+opt.ttimeout = true
+opt.ttimeoutlen = 100
 
 -- Undo
 opt.undofile = true
@@ -72,7 +78,10 @@ vim.api.nvim_create_autocmd("SwapExists", {
 	group = vim.api.nvim_create_augroup("SwapFilePrompt", { clear = true }),
 	callback = function(event)
 		local choice = vim.fn.confirm(
-			("A swap file exists for:\n%s\n\nSwap: %s\n\nRecover only if the other editor has stopped."):format(event.file, vim.v.swapname),
+			("A swap file exists for:\n%s\n\nSwap: %s\n\nRecover only if the other editor has stopped."):format(
+				event.file,
+				vim.v.swapname
+			),
 			"&Read-only\n&Recover\n&Edit anyway\n&Cancel",
 			4
 		)
@@ -102,7 +111,17 @@ opt.background = "dark"
 opt.pumheight = 12
 opt.winblend = 0
 opt.pumblend = 0
-opt.fillchars:append({ eob = " ", diff = "╱", vert = "│", horiz = "─", horizup = "┴", horizdown = "┬", vertleft = "┤", vertright = "├", verthoriz = "┼" })
+opt.fillchars:append({
+	eob = " ",
+	diff = "╱",
+	vert = "│",
+	horiz = "─",
+	horizup = "┴",
+	horizdown = "┬",
+	vertleft = "┤",
+	vertright = "├",
+	verthoriz = "┼",
+})
 opt.shortmess:append("I")
 if vim.fn.exists("+winborder") == 1 then
 	opt.winborder = "rounded"

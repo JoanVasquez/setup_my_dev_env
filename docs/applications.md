@@ -72,17 +72,19 @@ The status bar follows your Mocha reference: centered icon-numbered windows, mod
 
 ## Starship and terminals
 
-Starship's shared template is [config/starship/starship.toml](../config/starship/starship.toml), imported from your system. The Dracula palette, powerline separators, OS/user/directory/Git/runtime/job/time segments, command duration, and input symbols are retained.
+Starship's shared template is [config/starship/starship.toml](../config/starship/starship.toml), imported from your system. Its Catppuccin Mocha palette, directory and Git context, detailed repository state, and mode-aware input symbol are retained.
 
 The global configuration links to `$XDG_CONFIG_HOME/starship.toml`; Zsh also receives `$ZDOTDIR/starship.toml` pointing to the same repository file. Editing that template affects both. Starship does not require installing every language displayed in its module definitions.
 
 | Terminal | Managed configuration |
 | --- | --- |
-| Kitty | Catppuccin Mocha, Maple Mono NF, cursor trails, margins, transparency, selection/copy and font-size shortcuts |
+| Kitty | Catppuccin Mocha, Maple Mono NF, cursor trails, padding, subtle transparency, selection/copy and font-size shortcuts |
 | Alacritty | TOML font, padding, opacity, and color configuration |
 | Ghostty | Font, padding, transparency, and Tokyonight Moon colors |
-| Konsole | `Moon.colorscheme` only, under the XDG data directory |
+| Konsole | Moon scheme plus a `Dev Environment` profile under the XDG data directory |
 
 Terminal selection installs/configures the chosen terminal; it does not change desktop default-terminal associations. Konsole needs you to select Moon in its profile settings. Its whole preferences directory is not replaced.
 
-Kitty uses your Maple Mono NF 12 pt profile and includes its local Mocha theme. Install that font separately and restart Kitty to apply the complete profile; see [config/kitty/README.md](../config/kitty/README.md). Other terminals also need an installed Nerd Font for icon glyphs. Font installation is not performed by this script.
+Kitty uses your Maple Mono NF 12 pt profile and includes its local Mocha theme. When present, `$XDG_CONFIG_HOME/quickshell/theme/kitty-current.conf` is loaded as an optional local palette override without making the shared config user-specific. Install the font separately and restart Kitty to apply the complete profile; see [config/kitty/README.md](../config/kitty/README.md). Other terminals also need an installed Nerd Font for icon glyphs. Font installation is not performed by this script.
+
+Konsole's managed profile uses Maple Mono NF 12 pt, the Moon color scheme, the account's login shell, and unlimited scrollback. Select **Dev Environment** from Konsole's profile menu or make it the default in Konsole settings. The installer does not replace `konsolerc`, because KDE stores unrelated live preferences there.

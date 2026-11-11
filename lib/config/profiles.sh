@@ -4,6 +4,7 @@
 # Link individual Zsh files rather than replacing the entire directory, preserving
 # local.zsh and any unrelated user configuration. Runtime plugins/history live elsewhere.
 zsh_support_links=(zsh-env zsh-node zsh-fzf zsh-aliases zsh-functions zsh-bindings zsh-plugins zsh-prompt zsh-plugin-list zsh-starship zsh-bootstrap zsh-legacy)
+konsole_support_links=(konsole-profile)
 install_one() {
     local support
     if [[ "$1" == fish ]]; then install_fish_config; return; fi
@@ -14,6 +15,9 @@ install_one() {
         if ((!dry)); then mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/zsh" "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"; fi
     fi
     if [[ "$1" == tmux ]]; then install_link tmux-startup; fi
+    if [[ "$1" == konsole ]]; then
+        for support in "${konsole_support_links[@]}"; do install_link "$support"; done
+    fi
 }
 unlink_one() {
     local support
@@ -24,5 +28,8 @@ unlink_one() {
         for support in "${zsh_support_links[@]}"; do unlink_link "$support"; done
     fi
     if [[ "$1" == tmux ]]; then unlink_link tmux-startup; fi
+    if [[ "$1" == konsole ]]; then
+        for support in "${konsole_support_links[@]}"; do unlink_link "$support"; done
+    fi
 }
 

@@ -17,7 +17,7 @@ Defaults below honor the corresponding XDG overrides unless a retained applicati
 | Kitty | `config/kitty/` | `$XDG_CONFIG_HOME/kitty/` |
 | Alacritty | `config/alacritty/` | `$XDG_CONFIG_HOME/alacritty/` |
 | Ghostty | `config/ghostty/` | `$XDG_CONFIG_HOME/ghostty/` |
-| Konsole | `config/konsole/Moon.colorscheme` | `$XDG_DATA_HOME/konsole/Moon.colorscheme` |
+| Konsole | Moon scheme + Dev Environment profile | `$XDG_DATA_HOME/konsole/` |
 | Zsh environment/rc | `config/zsh/.zshenv`, `.zshrc` | `$XDG_CONFIG_HOME/zsh/.zshenv`, `.zshrc` |
 | Zsh modules/manifest | `config/zsh/*.zsh`, `plugins.list` | Individual files under `$XDG_CONFIG_HOME/zsh/` |
 | Zsh Starship | Shared Starship template | `$XDG_CONFIG_HOME/zsh/starship.toml` |
@@ -147,7 +147,7 @@ Additional limits:
 
 - Repository versions, not universal upstream latest versions, are used for distro packages. Neovim gets a user runtime fallback when the distro binary is too old (Linux x86_64/aarch64); the downloaded binary must be compatible with the host glibc. Package-family support does not guarantee every optional package exists in every release.
 - Fedora selects Java 21; Debian/Arch follow their distro JDK versions. JDTLS requires a recent JDK (21+); installed tools are generally not upgraded.
-- Fonts, desktop terminal associations, user credentials, Git identity, SSH configuration, project environments, and local Ollama models are not provisioned.
+- Fonts, desktop terminal associations, display-manager activation, user credentials, Git identity, SSH configuration, project environments, and local Ollama models are not provisioned.
 - `install --all` manages every template, including several shells and whole application directories; preview its target list first.
 - No general AUR-helper installation, automatic restoration command, or complete system rollback is provided.
 - Fish preferences and Neovim’s writable plugin lockfile live in user directories. Other application directory links can still expose editable checkout files; review changes before committing.

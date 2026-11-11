@@ -9,3 +9,6 @@ export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
 if [[ -z "${SSH_CONNECTION:-}" && -z "${SSH_TTY:-}" && -n "${XDG_RUNTIME_DIR:-}" ]]; then
     export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 fi
+
+# Optional per-user LM Studio CLI. Keep the shared profile portable across users.
+[[ ! -d "$HOME/.lmstudio/bin" ]] || export PATH="$PATH:$HOME/.lmstudio/bin"

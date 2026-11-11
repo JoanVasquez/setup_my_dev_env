@@ -7,6 +7,38 @@ return {
 		keys = { { "<leader>at", "<cmd>Minuet virtualtext toggle<cr>", desc = "AI: Toggle inline suggestions" } },
 
 		config = function()
+			local function accept_without_duplicate_closers(accept)
+				local bufnr = vim.api.nvim_get_current_buf()
+				local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+				local original_tail = vim.api.nvim_get_current_line():sub(col + 1)
+
+				accept()
+				vim.schedule(function()
+					if not vim.api.nvim_buf_is_valid(bufnr) or vim.api.nvim_get_current_buf() ~= bufnr then
+						return
+					end
+
+					local new_row, new_col = unpack(vim.api.nvim_win_get_cursor(0))
+					local line = vim.api.nvim_get_current_line()
+					local tail = line:sub(new_col + 1)
+					local closers = original_tail:match([[^[%]%)}>'"]+]])
+					if new_row < row or not closers or tail:sub(1, #closers) ~= closers then
+						return
+					end
+
+					-- If the model supplied the exact closers already waiting after the
+					-- cursor (from mini.pairs), keep only the model's copy.
+					local before = line:sub(1, new_col)
+					for length = #closers, 1, -1 do
+						local candidate = closers:sub(1, length)
+						if before:sub(-length) == candidate and tail:sub(1, length) == candidate then
+							vim.api.nvim_buf_set_text(0, new_row - 1, new_col, new_row - 1, new_col + length, {})
+							break
+						end
+					end
+				end)
+			end
+
 			require("minuet").setup({
 				-- Ollama with Fill-in-the-Middle support
 				provider = "openai_fim_compatible",
@@ -20,7 +52,8 @@ return {
 				-- Performance tuning for local inference
 				n_completions = 1,
 				context_window = 1024,
-				request_timeout = 10,
+				-- Allow the first request to load the local model into GPU memory.
+				request_timeout = 30,
 				throttle = 400,
 				debounce = 250,
 
@@ -42,8 +75,8 @@ return {
 					show_on_completion_menu = false,
 
 					keymap = {
-						accept = "<C-l>",
-						accept_line = "<C-g>",
+						accept = nil,
+						accept_line = nil,
 						next = "<C-p>",
 						prev = "<C-n>",
 						dismiss = "<C-x>",
@@ -72,6 +105,13 @@ return {
 					},
 				},
 			})
+
+			vim.keymap.set("i", "<C-l>", function()
+				accept_without_duplicate_closers(require("minuet.virtualtext").action.accept)
+			end, { desc = "Accept AI suggestion" })
+			vim.keymap.set("i", "<C-g>", function()
+				accept_without_duplicate_closers(require("minuet.virtualtext").action.accept_line)
+			end, { desc = "Accept AI suggestion line" })
 
 			-- InsertEnter can occur after FileType for the first opened buffer.
 			local ft = vim.bo.filetype

@@ -41,7 +41,10 @@ resolve_setup() {
     package_components=("${resolved_components[@]}")
     # A dependency with a bundled config gets that config linked too.
     for component in "${package_components[@]}"; do
-        case "$component" in tmux|nvim|starship) append_unique chosen "$component" ;; esac
+        case "$component" in
+            tmux|nvim|starship) append_unique chosen "$component" ;;
+            kde) append_unique chosen konsole ;;
+        esac
     done
     # Config-only runs work on other distros; package runs need a supported family.
     # Docker conflict checks run before any package-manager changes.
@@ -57,9 +60,12 @@ resolve_setup() {
 }
 # Display the resolved plan so the final confirmation applies to concrete selections.
 show_plan() {
-    printf '\nPlatform: %s (%s)\nShell: %s | Terminal: %s\n' "$(os_field ID)" "$family" "$shell_choice" "$terminal_choice"
+    ui_section 'Review plan'
+    printf 'Platform: %s (%s)\nShell: %s | Terminal: %s\n' "$(os_field ID)" "$family" "$shell_choice" "$terminal_choice"
     printf 'Configs: %s\nOptional tools: %s\nAutomatic requirements: %s\n' "${chosen[*]:-none}" "${tools:-none}" "${automatic_components[*]:-none}"
     if ((no_packages)); then printf 'Package installation: skipped\n'; else printf 'Missing tools: %s\nDistro packages: %s\n' "${missing_components[*]:-none}" "${pkgs[*]:-none}"; fi
-    printf 'System Zsh XDG bootstrap: %s\n' "$system_zshenv"
-    printf 'Change login shell: %s | Enable Docker: %s | Docker group: %s\n' "$login_shell" "$enable_docker" "$docker_group"
+    printf 'System Zsh XDG bootstrap: %s (%s)\n' "$system_zshenv" "$(ui_bool "$system_zshenv")"
+    printf 'Change login shell: %s (%s) | Enable Docker: %s (%s) | Docker group: %s (%s)\n' \
+        "$login_shell" "$(ui_bool "$login_shell")" "$enable_docker" "$(ui_bool "$enable_docker")" \
+        "$docker_group" "$(ui_bool "$docker_group")"
 }

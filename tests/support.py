@@ -113,7 +113,12 @@ case "$*" in
                     [[ "$package" != tree-sitter-cli ]] || binary=tree-sitter
                     printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$binary"; chmod +x "$TEST_BIN/$binary" ;;
                 neovim) printf '#!/usr/bin/env bash\nprintf "NVIM v0.11.5\\n"\n' > "$TEST_BIN/nvim"; chmod +x "$TEST_BIN/nvim" ;;
-                zoxide|fzf|bat|fd|rg|eza|lf|vim|tree|xclip|wl-copy|fastfetch|col|tmux|starship|unzip|kitty|alacritty|konsole|ghostty) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$package"; chmod +x "$TEST_BIN/$package" ;;
+                zoxide|fzf|bat|fd|rg|eza|lf|vim|tree|xclip|wl-copy|fastfetch|col|tmux|starship|unzip|kitty|alacritty|konsole|ghostty|dolphin|ark) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$package"; chmod +x "$TEST_BIN/$package" ;;
+                plasma-meta|kde-standard|plasma-desktop|plasma-workspace)
+                    for binary in plasmashell kwin_wayland; do
+                        printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/$binary"
+                        chmod +x "$TEST_BIN/$binary"
+                    done ;;
                 util-linux|bsdextrautils) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/col"; chmod +x "$TEST_BIN/col" ;;
                 passwd) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/chsh"; chmod +x "$TEST_BIN/chsh" ;;
                 vim-enhanced) printf '#!/usr/bin/env bash\nexit 0\n' > "$TEST_BIN/vim"; chmod +x "$TEST_BIN/vim" ;;

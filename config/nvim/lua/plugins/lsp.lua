@@ -39,6 +39,10 @@ return {
 					},
 				},
 			})
+			vim.lsp.config("qmlls", {
+				cmd = { require("config.qml").tool("qmlls") },
+				root_markers = { ".qmlls.ini", "CMakeLists.txt", ".git" },
+			})
 			vim.lsp.config("bashls", {
 				settings = {
 					bashIde = { globPattern = "**/*@(.sh|.inc|.bash|.command)", includeAllWorkspaceSymbols = true },
@@ -58,7 +62,38 @@ return {
 				end,
 				settings = { Lua = { completion = { callSnippet = "Replace" }, format = { enable = false } } },
 			})
+			local typescript_root = vim.lsp.config.ts_ls.root_dir
+			local native_typescript_root = vim.lsp.config.tsc.root_dir
+			local function uses_native_typescript(root)
+				local package = vim.fs.joinpath(root, "node_modules/typescript/package.json")
+				local ok, metadata = pcall(function()
+					return vim.json.decode(table.concat(vim.fn.readfile(package), "\n"))
+				end)
+				local major = ok and tonumber((metadata.version or ""):match("^(%d+)"))
+				return major and major >= 7
+			end
+			-- TypeScript 7 provides a native LSP instead of tsserver.js.
+			vim.lsp.config("tsc", {
+				cmd = function(dispatchers, config)
+					local cmd = vim.fs.joinpath(config.root_dir, "node_modules/typescript/bin/tsc")
+					return vim.lsp.rpc.start({ cmd, "--lsp", "--stdio" }, dispatchers)
+				end,
+				root_dir = function(bufnr, on_dir)
+					typescript_root(bufnr, function(root)
+						if uses_native_typescript(root) then
+							native_typescript_root(bufnr, on_dir)
+						end
+					end)
+				end,
+			})
 			vim.lsp.config("ts_ls", {
+				root_dir = function(bufnr, on_dir)
+					typescript_root(bufnr, function(root)
+						if not uses_native_typescript(root) then
+							on_dir(root)
+						end
+					end)
+				end,
 				init_options = {
 					preferences = {
 						includeCompletionsForModuleExports = true,
@@ -123,7 +158,9 @@ return {
 			})
 			vim.lsp.enable({
 				"lua_ls",
+				"qmlls",
 				"ts_ls",
+				"tsc",
 				"basedpyright",
 				"ruff",
 				"bashls",

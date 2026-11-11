@@ -5,6 +5,40 @@ from support import InstallerTestCase
 
 
 class DependenciesTests(InstallerTestCase):
+    def test_kde_package_mapping_across_supported_families(self):
+        cases = (
+            ("ID=ubuntu\nID_LIKE=debian\n", "kde-standard xdg-desktop-portal-kde"),
+            ("ID=cachyos\nID_LIKE=arch\n", "plasma-meta konsole dolphin ark"),
+            ("ID=fedora\n", "plasma-desktop plasma-workspace xdg-desktop-portal-kde konsole dolphin ark"),
+        )
+        for release, packages in cases:
+            with self.subTest(release=release):
+                self.release.write_text(release)
+                output = self.cli("packages", "--shell", "none", "--terminal", "none",
+                                  "--tools", "kde", "--dry-run")
+                self.assertIn("Distro packages: " + packages, output)
+
+    def test_kde_profile_installs_plasma_baseline_and_konsole_config(self):
+        self.release.write_text("ID=cachyos\nID_LIKE=arch\n")
+        output = self.cli("setup", "--shell", "none", "--terminal", "none",
+                          "--tools", "kde", "--dry-run")
+        self.assertIn("Optional tools: kde", output)
+        self.assertIn("Configs: konsole", output)
+        self.assertIn("Distro packages: plasma-meta konsole dolphin ark", output)
+
+        self.fake_system()
+        self.cli("setup", "--shell", "none", "--terminal", "none",
+                 "--tools", "kde", "--yes")
+        konsole = self.home / ".local/share/konsole"
+        self.assertTrue((konsole / "Moon.colorscheme").is_symlink())
+        self.assertTrue((konsole / "Dev Environment.profile").is_symlink())
+        first_log = self.log.read_text()
+        self.assertIn("pacman -S --needed --noconfirm -- plasma-meta konsole dolphin ark", first_log)
+        output = self.cli("setup", "--shell", "none", "--terminal", "none",
+                          "--tools", "kde", "--yes")
+        self.assertIn("skip: kde already installed", output)
+        self.assertEqual(self.log.read_text(), first_log)
+
     def test_zsh_requirements_are_automatic_even_with_tools_none(self):
         self.fake_system()
         output = self.cli("setup", "--shell", "zsh", "--terminal", "none", "--tools", "none", "--dry-run")
